@@ -10,14 +10,10 @@
 </p>
 
 <p align="center">
-  <strong>v1.0.0</strong> &nbsp;·&nbsp; Windows desktop &nbsp;·&nbsp; Electron &nbsp;·&nbsp; AGPL-3.0-or-later
-</p>
-
-<p align="center">
-  <a href="#showcase">Showcase</a> &nbsp;·&nbsp;
-  <a href="#features">Features</a> &nbsp;·&nbsp;
-  <a href="#getting-started">Getting started</a> &nbsp;·&nbsp;
-  <a href="#development">Development</a>
+  <a href="https://github.com/Ryukotsuki/PokemonShowdownPro/releases"><img src="https://img.shields.io/github/v/release/Ryukotsuki/PokemonShowdownPro?style=for-the-badge&label=Latest%20Release" alt="Latest release"></a>
+  <a href="https://github.com/Ryukotsuki/PokemonShowdownPro/releases"><img src="https://img.shields.io/github/downloads/Ryukotsuki/PokemonShowdownPro/total?style=for-the-badge" alt="Downloads"></a>
+  <a href="https://github.com/Ryukotsuki/PokemonShowdownPro/stargazers"><img src="https://img.shields.io/github/stars/Ryukotsuki/PokemonShowdownPro.svg?style=for-the-badge" alt="Stars"></a>
+  <a href="https://github.com/Ryukotsuki/PokemonShowdownPro/issues"><img src="https://img.shields.io/github/issues/Ryukotsuki/PokemonShowdownPro.svg?style=for-the-badge" alt="Issues"></a>
 </p>
 
 ---
