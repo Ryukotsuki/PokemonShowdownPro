@@ -34,6 +34,8 @@ The workflow files belong at:
 
 Builds also run on pushes to `main`/`master` and on pull requests. Each job runs unit tests, packages the app, and checks the actual packaged runtime in an isolated, muted profile. Packaged checks validate the shipped Showdex and add-ons through the update worker, including both client compatibility audits, native source extraction, and bundled pnpm. They require access to Pokémon Showdown; downloading newer releases is reserved for normal app update checks. If package verification fails, download the `Package-verification` artifact for detailed diagnostics.
 
+Audit sessions block the site's advertising bootstrap and its trackers so unrelated advertising requests cannot stall client navigation. Each navigation has a 45-second limit and one retry; real client load failures and compatibility failures still fail verification. This applies only to test windows.
+
 ## Publish version 1.0.0
 
 1. Confirm `package.json` and `package-lock.json` both contain version `1.0.0`.

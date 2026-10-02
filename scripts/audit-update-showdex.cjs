@@ -3,12 +3,14 @@ const {app,BrowserWindow,session,net,protocol}=require('electron');
 protocol.registerSchemesAsPrivileged([{scheme:'showdown-pro',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}]);
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {pathToFileURL}=require('node:url');
+const {isolateAuditNetwork,loadAuditClient}=require('./audit-client.cjs');
 const auditFlag=process.argv.indexOf('--audit-showdex-update');
 const root=path.resolve(__dirname,'..'),stage=path.resolve(process.argv[auditFlag>=0?auditFlag+1:2]),bundle=path.join(stage,'showdex');
 app.setPath('userData',process.env.SHOWDOWN_PRO_UPDATE_PROFILE||path.join(stage,'test-results/showdex-profile'));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
  const ses=session.fromPartition('persist:update-showdex'),missing=new Set();
+ isolateAuditNetwork(ses);
  ses.protocol.handle('showdown-pro',async request=>{
   const url=new URL(request.url),base=url.hostname==='showdex'?bundle:url.hostname==='assets'?path.join(root,'app/assets'):null;
   if(!base)return new Response('',{status:404});const file=path.resolve(base,'.'+decodeURIComponent(url.pathname));
@@ -19,7 +21,7 @@ app.whenReady().then(async()=>{
  const run=code=>wc.executeJavaScript('(()=>{'+code+'})()');
  const wait=async code=>{for(let i=0;i<300;i++){if(await run('return !!('+code+');').catch(()=>false))return;await pause(100);}throw new Error('Showdex update validation timed out: '+code);};
  for(const version of ['old','new']) {
-  await wc.loadURL('https://play.pokemonshowdown.com/'+version+'client');
+  await loadAuditClient(wc,'https://play.pokemonshowdown.com/'+version+'client');
   await wait(version==='old'?'window.app?.socket?.readyState===1&&window.OptionsPopup':'window.PS?.connection?.connected&&window.PS.prefs');
   await run(`${version==='old'?'app.socket.send':'PS.connection.send'}=()=>{};`);
   assert.equal(await wc.executeJavaScript(fs.readFileSync(path.join(root,'app/client-theme.js'),'utf8')),true);

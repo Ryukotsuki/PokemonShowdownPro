@@ -5,11 +5,13 @@ const root=path.resolve(__dirname,'..'),stageIndex=process.argv.indexOf('--updat
 fs.mkdirSync(out,{recursive:true});
 const {BrowserAddons}=require('../app/browser-addons.cjs');
 const {addonDefaults}=require('../app/addon-catalog.cjs');
+const {isolateAuditNetwork,loadAuditClient}=require('./audit-client.cjs');
 const {history,request}=require('../tests/fixtures.cjs');
 app.setPath('userData',process.env.SHOWDOWN_PRO_UPDATE_PROFILE||path.join(out,'profile'));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
  const ses=session.fromPartition('persist:addons'),manager=new BrowserAddons(root,ses,()=>{},stage?{sourceRoot:path.join(stage,'browser-addons'),buildRoot:process.env.SHOWDOWN_PRO_UPDATE_BUILD_ROOT||path.join(stage,'build/browser-addons')}:{});
+ isolateAuditNetwork(ses);
  await manager.apply(addonDefaults);
  assert.equal(manager.active.size,6);assert.equal(manager.errors.size,0);
  const win=new BrowserWindow({show:false,width:1100,height:800,webPreferences:{session:ses,offscreen:true,backgroundThrottling:false}}),wc=win.webContents,errors=[],report=[];
@@ -29,7 +31,7 @@ app.whenReady().then(async()=>{
   finally {stats.close();}
  };
  for(const client of ['old','new']) {
-  await wc.loadURL('https://play.pokemonshowdown.com/'+(client==='old'?'oldclient':'newclient'));
+  await loadAuditClient(wc,'https://play.pokemonshowdown.com/'+(client==='old'?'oldclient':'newclient'));
   const host=client==='old'?'app':'PS',id='battle-gen9randombattle-'+(client==='old'?'555':'556');
   await waitFor(client==='old'?'window.app?.socket?.readyState===1 && window.BattleTooltips':'window.PS?.connection?.connected && window.BattleTooltips');
   await waitFor('document.getElementById("3I-STATE") && document.documentElement.hasAttribute("data-showdown-settings")');
@@ -122,7 +124,7 @@ app.whenReady().then(async()=>{
  }
  await manager.apply(Object.fromEntries(Object.keys(addonDefaults).map(key=>[key,false])));
  assert.equal(manager.active.size,0);
- await wc.loadURL('https://play.pokemonshowdown.com/oldclient');await pause(1500);
+ await loadAuditClient(wc,'https://play.pokemonshowdown.com/oldclient');await pause(1500);
  assert.equal(await evaluate('return !!document.getElementById("3I-STATE");'),false);
  assert.equal(await evaluate('return document.documentElement.hasAttribute("data-showdown-settings");'),false);
  assert.equal(await evaluate('return !!document.querySelector(".ps-stats-button");'),false);

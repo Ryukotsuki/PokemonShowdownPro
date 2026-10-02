@@ -313,6 +313,7 @@ async function createWindow() {
   statisticsFile = path.join(app.getPath('userData'), 'battle-stats.json');
   lifetimeRecord = loadRecord(statisticsFile);
   clientSession = session.fromPartition(smoke ? 'persist:pro-smoke' : 'persist:showdown-pro');
+  if(verifyRelease)require('../scripts/audit-client.cjs').isolateAuditNetwork(clientSession);
   if(smoke)await clientSession.clearStorageData({storages:['localstorage','cookies']});
   browserAddons=new BrowserAddons(root,clientSession,publish,{sourceRoot:addonUpdates.installed('addons',path.join(root,'vendor/browser-addons')),buildRoot:app.isPackaged?path.join(app.getPath('userData'),'browser-addons'):path.join(root,'build/browser-addons')});
   await browserAddons.apply(preferences.addons);
