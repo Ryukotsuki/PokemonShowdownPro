@@ -1,0 +1,7 @@
+node_modules/
+.tools/
+build/
+logs/
+vendor/
+test-results/
+dist/

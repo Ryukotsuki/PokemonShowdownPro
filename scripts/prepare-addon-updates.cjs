@@ -12,7 +12,8 @@ if(!scratch.startsWith(path.join(path.resolve(os.tmpdir()),'ps-au-')))throw new 
 const say=message=>console.log(JSON.stringify({message}));
 const installed=(component,fallback)=>request.current[component]?contained(request.directory,request.current[component].directory):fallback;
 const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
-const electron=process.versions.electron?process.execPath:require('electron');
+const electron=process.env.SHOWDOWN_PRO_ELECTRON_EXECUTABLE||(process.versions.electron?process.execPath:require('electron'));
+const auditArgs=(component,target)=>[root,component==='addons'?'--audit-addon-update':'--audit-showdex-update',...(component==='addons'?['--update-stage',target]:[target]),...(process.env.SHOWDOWN_PRO_UPDATE_NO_SANDBOX==='1'?['--no-sandbox']:[])];
 const electronEnv={...process.env};delete electronEnv.ELECTRON_RUN_AS_NODE;
 async function addons() {
   say('Checking browser add-on versions…');
@@ -33,7 +34,7 @@ async function addons() {
   if(!changed){removeStage(stage,'browser-addons');return;}
   fs.writeFileSync(path.join(target,'versions.json'),JSON.stringify(packages,null,2));
   say('Testing updated add-ons in both clients…');
-  await runProcess(electron,[path.join(root,'scripts/audit-addon-loading.cjs'),'--update-stage',stage],{cwd:root,env:{...electronEnv,SHOWDOWN_PRO_UPDATE_PROFILE:path.join(scratch,'addons-profile'),SHOWDOWN_PRO_UPDATE_BUILD_ROOT:path.join(scratch,'addons'),SHOWDOWN_PRO_UPDATE_AUDIT_ROOT:path.join(scratch,'audit-addons')},timeout:4*60*1000,onOutput:text=>fs.appendFileSync(path.join(stage,'addons-validation.log'),text)});
+  await runProcess(electron,auditArgs('addons',stage),{cwd:root,env:{...electronEnv,SHOWDOWN_PRO_UPDATE_PROFILE:path.join(scratch,'addons-profile'),SHOWDOWN_PRO_UPDATE_BUILD_ROOT:path.join(scratch,'addons'),SHOWDOWN_PRO_UPDATE_AUDIT_ROOT:path.join(scratch,'audit-addons')},timeout:4*60*1000,onOutput:text=>fs.appendFileSync(path.join(stage,'addons-validation.log'),text)});
   result.addons={versions,sha256:treeHash(target)};
 }
 async function showdex() {
@@ -51,10 +52,11 @@ async function showdex() {
   if(read(path.join(source,'package.json')).version!==version)throw new Error('Showdex release version mismatch');
   say('Building Showdex with Pro styling…');
   const log=text=>fs.appendFileSync(path.join(stage,'showdex-validation.log'),text);
-  await runProcess(process.platform==='win32'?'npx.cmd':'npx',['--yes','pnpm@10.33.0','install','--frozen-lockfile','--ignore-scripts'],{cwd:source,env:{...process.env,CI:'true'},timeout:10*60*1000,onOutput:log});
+  const buildEnv={...process.env,CI:'true',PATH:path.dirname(process.execPath)+path.delimiter+(process.env.PATH||process.env.Path||'')};
+  await runProcess(process.execPath,[path.join(root,'node_modules/pnpm/bin/pnpm.cjs'),'install','--frozen-lockfile','--ignore-scripts','--config.manage-package-manager-versions=false'],{cwd:source,env:buildEnv,timeout:10*60*1000,onOutput:log});
   await runProcess(process.execPath,[path.join(root,'scripts/build-showdex.mjs'),'--source',source,'--output',path.join(stage,'showdex')],{cwd:root,timeout:6*60*1000,onOutput:log});
   say('Testing updated Showdex in both clients…');
-  await runProcess(electron,[path.join(root,'scripts/audit-update-showdex.cjs'),stage],{cwd:root,env:{...electronEnv,SHOWDOWN_PRO_UPDATE_PROFILE:path.join(scratch,'showdex-profile')},timeout:4*60*1000,onOutput:log});
+  await runProcess(electron,auditArgs('showdex',stage),{cwd:root,env:{...electronEnv,SHOWDOWN_PRO_UPDATE_PROFILE:path.join(scratch,'showdex-profile')},timeout:4*60*1000,onOutput:log});
   fs.writeFileSync(path.join(stage,'showdex/upstream-source.zip'),data);
   fs.copyFileSync(path.join(source,'LICENSE'),path.join(stage,'showdex/UPSTREAM-LICENSE.txt'));
   result.showdex={version,tag,source:'https://github.com/doshidak/showdex/releases/tag/'+encodeURIComponent(tag),archiveSha256:sha256(data),sha256:treeHash(path.join(stage,'showdex'))};

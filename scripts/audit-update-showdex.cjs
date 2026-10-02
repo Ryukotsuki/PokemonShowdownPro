@@ -3,7 +3,8 @@ const {app,BrowserWindow,session,net,protocol}=require('electron');
 protocol.registerSchemesAsPrivileged([{scheme:'showdown-pro',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}]);
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {pathToFileURL}=require('node:url');
-const root=path.resolve(__dirname,'..'),stage=path.resolve(process.argv[2]),bundle=path.join(stage,'showdex');
+const auditFlag=process.argv.indexOf('--audit-showdex-update');
+const root=path.resolve(__dirname,'..'),stage=path.resolve(process.argv[auditFlag>=0?auditFlag+1:2]),bundle=path.join(stage,'showdex');
 app.setPath('userData',process.env.SHOWDOWN_PRO_UPDATE_PROFILE||path.join(stage,'test-results/showdex-profile'));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{

@@ -32,8 +32,10 @@ function setProgramIdentity(win) {
 const CLIENT_URL = 'https://play.pokemonshowdown.com/';
 const SIDEBAR_WIDTH = 360;
 const smoke = process.argv.includes('--smoke-test');
-if (smoke) require('../scripts/mute-test-audio.cjs');
+const verifyRelease = process.argv.includes('--verify-release');
+if (smoke || verifyRelease) require('../scripts/mute-test-audio.cjs');
 if (smoke) app.setPath('userData', path.join(root, 'test-results/smoke-profile'));
+if (verifyRelease) app.setPath('userData', process.env.SHOWDOWN_PRO_VERIFY_PROFILE || path.join(require('node:os').tmpdir(),'showdown-pro-release-check'));
 protocol.registerSchemesAsPrivileged([{ scheme: 'showdown-pro', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 let window, client, hubTooltip, closing = false;
 let browserAddons, appliedShowdex = true, reloadJob = null;
@@ -298,7 +300,7 @@ async function createWindow() {
   for (const obsolete of [previousFile, path.join(app.getPath('userData'), 'active-battles.json')]) fs.rmSync(obsolete, { force: true });
   if(smoke) {preferences.showdexEnabled=true;preferences.addons=Object.fromEntries(addonCatalog.map(addon=>[addon.key,false]));}
   appliedShowdex=preferences.showdexEnabled;
-  const updateDirectory=path.join(root,smoke?'test-results/smoke-updates':'build/addon-updates');
+  const updateDirectory=smoke?path.join(root,'test-results/smoke-updates'):app.isPackaged?path.join(app.getPath('userData'),'addon-updates'):path.join(root,'build/addon-updates');
   addonUpdates=new AddonUpdates({directory:updateDirectory,prepare:smoke?async()=>({}):prepareUpdates(root,updateDirectory),canCheck:updatesIdle,onChange:publish});
   if(!smoke)addonUpdates.activatePending();
   if(smoke) {
@@ -312,7 +314,7 @@ async function createWindow() {
   lifetimeRecord = loadRecord(statisticsFile);
   clientSession = session.fromPartition(smoke ? 'persist:pro-smoke' : 'persist:showdown-pro');
   if(smoke)await clientSession.clearStorageData({storages:['localstorage','cookies']});
-  browserAddons=new BrowserAddons(root,clientSession,publish,{sourceRoot:addonUpdates.installed('addons',path.join(root,'vendor/browser-addons'))});
+  browserAddons=new BrowserAddons(root,clientSession,publish,{sourceRoot:addonUpdates.installed('addons',path.join(root,'vendor/browser-addons')),buildRoot:app.isPackaged?path.join(app.getPath('userData'),'browser-addons'):path.join(root,'build/browser-addons')});
   await browserAddons.apply(preferences.addons);
   if(browserAddons.errors.size&&addonUpdates.saved.current.addons){addonUpdates.rollback('addons','An extension could not load.');browserAddons.sourceRoot=addonUpdates.installed('addons',path.join(root,'vendor/browser-addons'));await browserAddons.apply(preferences.addons);}
   else addonUpdates.confirm('addons');
@@ -326,7 +328,7 @@ async function createWindow() {
   window = new BrowserWindow({ title: appTitle, icon: appIcon, width: 1580, height: 980, minWidth: 1080, minHeight: 650, show: false,
     webPreferences: { preload: path.join(__dirname, 'panel-preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false } });
   setProgramIdentity(window);
-  if (!smoke || process.argv.includes('--visible')) window.show();
+  if ((!smoke && !verifyRelease) || process.argv.includes('--visible')) window.show();
   client = new WebContentsView({ webPreferences: { session: clientSession, preload: path.join(__dirname, 'client-preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false } });
   if (smoke) client.webContents.on('console-message', details => {
     if (details.level === 'error') console.error('Client:', details.message);
@@ -362,10 +364,14 @@ async function createWindow() {
   hubTooltip = await createHubTooltip(window);
   client.webContents.on('focus', () => hubTooltip?.hide());
   layout();
-  if (!smoke || process.argv.includes('--visible')) window.show();
+  if ((!smoke && !verifyRelease) || process.argv.includes('--visible')) window.show();
   const loading = client.webContents.loadURL(smoke ? CLIENT_URL+(process.argv.includes('--new-client') ? 'newclient' : 'oldclient') : CLIENT_URL).catch(() => {});
   // Smoke checks wait for the bridge, not every third-party page resource.
-  if (!smoke) await loading;
+  if (!smoke && !verifyRelease) await loading;
+  if(verifyRelease) {
+    try {await require('../scripts/audit-release-runtime.cjs')({app,window,client,root,addonUpdates,browserAddons,state});app.exit(0);}
+    catch(error){console.error(error);app.exit(1);}return;
+  }
   if(!smoke){updateTimer=setInterval(checkAutoUpdates,60000);updateTimer.unref();setTimeout(checkAutoUpdates,10000).unref();}
   if (smoke) setTimeout(async () => { try {
     const assert = require('node:assert/strict');

@@ -6,6 +6,10 @@ This app is an independent integration, not an official Pokémon Showdown or Sho
 - **Showdex**, Keith Choison and contributors — https://github.com/doshidak/showdex — AGPL-3.0. Its full calculator is compiled from `vendor/showdex`, retaining upstream source, patches, assets, and license.
 - **Electron**, OpenJS Foundation and contributors — MIT. Runtime notices are distributed with the Electron npm dependency.
 - **@electron-internal/extract-zip** — Electron's pinned add-on archive extractor. Its prebuilt binaries and license are included in the npm dependency.
+- **Node.js**, OpenJS Foundation and contributors — the release includes a matching Node.js runtime for add-on updates. Its license and bundled dependency notices are included in `build/update-runtime/LICENSE.txt`.
+- **pnpm**, contributors — MIT. A pinned package-manager runtime is included for rebuilding updated Showdex sources; its license is retained in `node_modules/pnpm/LICENSE`.
+
+Release packages retain the pinned Showdex and Pokémon Showdown client source archives in `build/upstream/`, together with this project's compatibility and styling patches in `app/` and `scripts/`.
 
 The original Chrome packages for these add-ons are retained in `vendor/browser-addons`. Their manifests, bundled notices and authorship remain intact. Versions and package hashes are recorded in `vendor/browser-addons/versions.json`. App compatibility changes are generated separately in `build/browser-addons` by `app/browser-addons.cjs`.
 

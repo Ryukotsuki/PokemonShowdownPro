@@ -4,7 +4,7 @@
   "private": true,
   "description": "Official Pokémon Showdown client with Showdex, Pro styling, and optional add-ons",
   "license": "AGPL-3.0-or-later",
-  "main": "app/main.cjs",
+  "main": "app/entry.cjs",
   "scripts": {
     "start": "node scripts/start.cjs",
     "setup": "node scripts/setup.cjs",
@@ -35,13 +35,22 @@
     "audit:hover": "node scripts/start.cjs --smoke-test --theme-audit --hover-only",
     "audit:formats": "node scripts/start.cjs --smoke-test --theme-audit --formats-only",
     "test:navigation": "node scripts/start.cjs --smoke-test --theme-audit --navigation-only",
-    "audit:hub": "node scripts/start.cjs --smoke-test --sidebar-only"
+    "audit:hub": "node scripts/start.cjs --smoke-test --sidebar-only",
+    "fetch:vendor": "node scripts/fetch-vendor.cjs",
+    "dist": "node scripts/prepare-release.cjs && electron-builder --publish never",
+    "verify:package": "node scripts/verify-package.cjs"
   },
   "devDependencies": {
-    "@electron-internal/extract-zip": "1.0.5",
-    "electron": "44.4.5"
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
   },
   "engines": {
     "node": ">=24"
-  }
+  },
+  "dependencies": {
+    "@electron-internal/extract-zip": "1.0.5",
+    "pnpm": "10.34.6"
+  },
+  "homepage": "https://github.com/Ryukotsuki/PokemonShowdownPro",
+  "author": "Ryukotsuki"
 }

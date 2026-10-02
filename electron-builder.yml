@@ -1,0 +1,51 @@
+appId: com.pokemonshowdownpro.desktop
+productName: Pokemon Showdown Pro
+asar: false
+npmRebuild: false
+directories:
+  output: dist
+files:
+  - app/**/*
+  - scripts/**/*
+  - tests/fixtures.cjs
+  - build/showdex/**/*
+  - build/update-runtime/**/*
+  - build/upstream/**/*
+  - vendor/browser-addons/**/*
+  - vendor/showdex/package.json
+  - vendor/showdex/LICENSE
+  - vendor-versions.json
+  - LICENSE
+  - THIRD_PARTY_NOTICES.md
+  - '!**/.git/**'
+  - '!**/node_modules/electron/**'
+  - '!**/_metadata/**'
+win:
+  icon: app/assets/icons/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: zip
+      arch: [x64]
+  artifactName: PokemonShowdownPro-${version}-windows-${arch}.${ext}
+nsis:
+  artifactName: PokemonShowdownPro-${version}-Setup-${arch}.${ext}
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  runAfterFinish: false
+publish: null
+mac:
+  icon: app/assets/icons/icon.icns
+  category: public.app-category.games
+  identity: null
+  target: [dmg, zip]
+  artifactName: PokemonShowdownPro-${version}-macos-${arch}.${ext}
+linux:
+  icon: app/assets/icons/icon.png
+  category: Game
+  executableName: pokemon-showdown-pro
+  target: [AppImage, tar.gz]
+  artifactName: PokemonShowdownPro-${version}-linux-${arch}.${ext}
