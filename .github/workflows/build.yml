@@ -66,10 +66,10 @@ jobs:
         run: npm ci
       - name: Fetch pinned upstream sources
         run: npm run fetch:vendor
-      - name: Test
-        run: npm test
       - name: Build Showdex
         run: npm run setup
+      - name: Test
+        run: npm test
       - name: Download browser add-ons
         run: npm run download:addons
       - name: Package apps
