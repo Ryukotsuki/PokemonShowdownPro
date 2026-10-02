@@ -17,7 +17,7 @@
   <a href="#showcase">Showcase</a> &nbsp;·&nbsp;
   <a href="#features">Features</a> &nbsp;·&nbsp;
   <a href="#getting-started">Getting started</a> &nbsp;·&nbsp;
-  <a href="docs/DEVELOPMENT.md">Technical guide</a>
+  <a href="#development">Development</a>
 </p>
 
 ---
@@ -117,7 +117,7 @@ Use **Check now** for a manual check, or turn off **Automatic updates** to check
 
 ## Development
 
-See the [technical guide](docs/DEVELOPMENT.md) for architecture, troubleshooting, setup details, and the full list of audits. Commands in the guide run from the repository root.
+Run these checks from the repository root:
 
 ```powershell
 npm test
