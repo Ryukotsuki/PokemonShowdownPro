@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Three Island</title>
+  <link rel="stylesheet" href="pro-settings.css">
+</head>
+<body>
+  <main class="settings-shell">
+    <header>
+      <span class="eyebrow">ADD-ON SETTINGS</span>
+      <h1>Three Island</h1>
+      <p>Customize paste previews and team importing.</p>
+    </header>
+    <section class="settings-list" aria-label="Three Island settings">
+      <label class="setting" for="enabled"><span><strong>Enable Three Island</strong><small>Use paste previews and import tools.</small></span><input id="enabled" type="checkbox" role="switch" disabled></label>
+      <label class="setting" for="show-item"><span><strong>Item icons</strong><small>Show held items in team previews.</small></span><input id="show-item" type="checkbox" role="switch" disabled></label>
+      <label class="setting" for="show-tera"><span><strong>Tera icons</strong><small>Show each Pokémon's Tera type.</small></span><select id="show-tera" disabled><option value="1">Always</option><option value="2">When different</option><option value="0">Off</option></select></label>
+      <label class="setting" for="import-code"><span><strong>Import !code</strong><small>Import teams shared in code blocks.</small></span><input id="import-code" type="checkbox" role="switch" disabled></label>
+    </section>
+    <footer><p id="status" role="status">Changes apply after Reload Showdown.</p><button id="close" type="button">Done</button></footer>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

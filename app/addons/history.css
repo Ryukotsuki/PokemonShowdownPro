@@ -1,0 +1,253 @@
+:root { color-scheme:dark; --bg:#102331; --surface:#172f40; --raised:#203d51; --border:#35586e; --text:#e7f4fc; --muted:#a4bed0; --accent:#66c0f4; --accent-ink:#102337; --hover:#294e66; --win:#b8e9a7; --win-bg:#244236; --loss:#ffb8b2; --loss-bg:#422d35; --shadow:0 8px 26px #0002; }
+:root[data-theme="light"] { color-scheme:light; --bg:#f3f5f7; --surface:#fff; --raised:#eef2f6; --border:#ccd6df; --text:#243342; --muted:#576b7b; --accent:#216b9e; --accent-ink:#fff; --hover:#e2ecf3; --win:#24613c; --win-bg:#e8f5eb; --loss:#a0322c; --loss-bg:#fff0ed; --shadow:0 8px 26px #1e3f5c0a; }
+:root[data-theme="dark"] { --bg:#202327; --surface:#2c3035; --raised:#363c43; --border:#505a65; --text:#eef3f7; --muted:#b1bdc9; --accent:#8abaf0; --accent-ink:#1f2934; --hover:#404b57; }
+* { box-sizing:border-box; }
+[hidden] { display:none!important; }
+html { background:var(--bg)!important; scrollbar-color:var(--border) var(--bg); }
+body,body.dark-mode { margin:0!important; padding:0!important; min-height:100vh; color:var(--text)!important; background:var(--bg)!important; font:13px/1.5 "Segoe UI",Arial,sans-serif!important; }
+body:has(#sidebar) { display:grid!important; grid-template-columns:196px minmax(0,1fr); align-items:start; }
+body :is(h1,h2,h3,h4,p,label) { color:inherit!important; }
+body h1 { font-size:26px!important; line-height:1.25; letter-spacing:-.5px; font-weight:750; }
+body h2 { font-size:16px; line-height:1.35; }
+body h3 { font-size:13px; }
+body :is(button,input,select,textarea) { font:inherit!important; color:var(--text)!important; }
+body :is(button,input,select,textarea,a):focus-visible { outline:2px solid var(--accent)!important; outline-offset:3px; }
+body :is(input:not([type="checkbox"]),select,textarea) { width:100%; min-width:0; min-height:36px; padding:8px 10px!important; background:var(--bg)!important; border:1px solid var(--border)!important; border-radius:7px!important; box-shadow:none!important; }
+body input::placeholder,body textarea::placeholder { color:var(--muted)!important; opacity:.85; }
+body select { cursor:pointer; }
+body input[type="checkbox"] { accent-color:var(--accent); }
+body button { min-height:34px; padding:7px 12px!important; color:var(--text)!important; background:var(--raised)!important; border:1px solid var(--border)!important; border-radius:7px!important; box-shadow:none!important; text-shadow:none!important; font-weight:600!important; cursor:pointer; transform:none!important; transition:background .15s,border-color .15s!important; }
+body button:hover:not(:disabled) { background:var(--hover)!important; border-color:var(--accent)!important; }
+body button:disabled { opacity:.45!important; cursor:default!important; }
+body a { color:var(--accent)!important; }
+#sidebar { width:auto!important; min-height:100vh!important; max-height:100vh; overflow-y:auto; padding:24px 16px!important; position:sticky!important; top:0; color:var(--text)!important; background:var(--surface)!important; border:0!important; border-right:1px solid var(--border)!important; box-shadow:none!important; }
+.history-nav-brand { margin-bottom:24px; }
+.history-eyebrow { color:var(--accent)!important; font-size:10px; font-weight:750; text-transform:uppercase; letter-spacing:1.8px; }
+.history-nav-brand strong { display:block; font-size:18px; margin-top:4px; letter-spacing:-.3px; }
+#sidebar :is(.username-filter,.server-filter) { margin-bottom:18px!important; padding:0!important; background:none!important; }
+#sidebar label { display:block; margin-bottom:7px!important; color:var(--muted)!important; font-size:11px!important; font-weight:600; }
+#sidebar :is(select,input) { width:100%!important; }
+#sidebar h2 { margin:22px 0 10px; font-size:13px; }
+#format-list h3 { padding:12px 0 7px!important; margin:8px 0!important; border:0!important; font-size:10px!important; text-transform:uppercase; letter-spacing:1px; color:var(--muted)!important; }
+#format-list .format-button { padding:10px 11px!important; margin-bottom:6px; border-color:transparent!important; background:transparent!important; text-align:left; font-size:12px!important; line-height:1.4; box-shadow:none!important; overflow-wrap:anywhere; }
+#format-list .format-button.active { color:var(--accent)!important; border-color:var(--border)!important; background:var(--raised)!important; }
+#content { min-width:0; min-height:100vh!important; padding:24px!important; background:var(--bg)!important; }
+.history-page-header { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; margin-bottom:22px; }
+.history-page-header h1 { margin:6px 0 7px!important; text-align:left!important; }
+.history-page-header p { margin:0; color:var(--muted)!important; font-size:12px; }
+body .history-settings-button { display:flex; align-items:center; gap:7px; flex-shrink:0; margin-top:4px; transform:none!important; }
+body .settings-icon { position:static!important; width:18px!important; height:18px!important; padding:0!important; margin:0!important; background:none!important; color:inherit!important; border-radius:0!important; transform:none!important; }
+.history-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:18px; }
+.history-summary article { border:1px solid var(--border); border-radius:10px; background:var(--surface); padding:13px 15px; }
+.history-summary span { display:block; color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.8px; font-weight:650; }
+.history-summary strong { display:block; font-size:23px; line-height:1.4; margin-top:4px; }
+.history-summary [data-result="win"] strong { color:var(--win); }
+.history-summary [data-result="loss"] strong { color:var(--loss); }
+.history-chart-panel,.history-battles-panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); margin-bottom:18px; padding:18px; min-width:0; }
+.history-chart-panel { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px 16px; align-items:start; }
+.history-section-header h2 { margin:0 0 3px; font-weight:700; }
+.history-section-header p { margin:0; color:var(--muted)!important; font-size:11px; }
+body #chartContainer { grid-column:1/-1; width:100%!important; height:230px!important; margin:6px 0 0!important; padding:0!important; border-radius:0; background:transparent!important; box-shadow:none!important; }
+body #ratingChart { width:100%!important; height:100%!important; max-width:100%; }
+body .chart-controls { width:auto!important; margin:0!important; padding:0!important; background:none!important; }
+body .timeframe-selector { margin:0!important; }
+body .timeframe-select { width:auto; min-width:132px; font-size:11px!important; }
+.history-chart-panel:has(#chartContainer[style*="display: none"]) { display:none!important; }
+.history-battles-header { display:flex; justify-content:space-between; gap:16px; align-items:center; margin-bottom:16px; }
+body .filter-button-container { margin:0!important; display:flex; gap:8px; align-items:center; }
+body .apply-filter-button { font-size:11px!important; }
+body .active-filters-badge { background:var(--accent)!important; color:var(--accent-ink)!important; border-radius:5px; }
+.history-table-wrap { min-width:0; overflow:auto; border:1px solid var(--border); border-radius:8px; }
+body #battle-stats { width:100%; border-collapse:collapse; table-layout:auto; font-size:11px; }
+body #battle-stats :is(th,td) { padding:11px 10px!important; border:0!important; border-bottom:1px solid var(--border)!important; text-align:left; }
+body #battle-stats td { color:var(--text)!important; }
+body #battle-stats th { background:var(--raised)!important; color:var(--muted)!important; font-size:10px; white-space:nowrap; font-weight:650; }
+body #battle-stats .expandable-row { background:transparent!important; color:var(--text)!important; }
+body #battle-stats .expandable-row:hover { background:var(--hover)!important; }
+body #battle-stats .expandable-row td:first-child { min-width:150px; }
+body #battle-stats .expandable-row td:last-child { font-size:10px; color:var(--muted)!important; white-space:nowrap; }
+body .opponent-cell { display:flex; flex-wrap:wrap; gap:5px 7px; align-items:center; }
+body .opponent-name { font-weight:650; overflow-wrap:anywhere; }
+body .record-badge { margin:0!important; padding:1px 5px; font-size:9px; background:var(--raised)!important; color:var(--muted)!important; border:1px solid var(--border)!important; }
+.history-result { padding:1px 6px; border:1px solid var(--border); border-radius:4px; font-size:9px; font-weight:700; color:var(--muted); }
+.history-result[data-result="win"] { background:var(--win-bg); color:var(--win); }
+.history-result[data-result="loss"] { background:var(--loss-bg); color:var(--loss); }
+body .opponent-team-icons { gap:0!important; flex-wrap:wrap; min-width:0; }
+body #battle-stats .expanded-content { color:var(--text)!important; background:var(--bg)!important; }
+body #battle-stats .expanded-content td { padding:18px!important; }
+body .expanded-content-container { padding:0!important; background:none!important; }
+body .battle-comparison { display:grid!important; grid-template-columns:minmax(0,1fr) minmax(90px,.7fr) minmax(0,1fr); gap:12px; padding:0!important; margin:0 0 16px!important; background:none!important; border:0!important; }
+body .battle-side { min-width:0; max-width:none!important; background:var(--surface)!important; border:1px solid var(--border)!important; border-radius:8px!important; padding:12px!important; }
+body .battle-side h3 { margin:0 0 8px!important; font-size:11px; overflow-wrap:anywhere; }
+body .battle-vs { min-width:0; align-self:center; padding:0!important; text-align:center; }
+body .format-info,body .timestamp { color:var(--muted)!important; font-size:10px; overflow-wrap:anywhere; }
+body .vs-text { color:var(--accent)!important; font-size:18px!important; margin:5px 0!important; }
+body .battle-buttons-container { gap:7px; flex-wrap:wrap; margin-bottom:12px!important; }
+body .battle-detail-button { font-size:11px!important; min-width:0!important; }
+body .battle-detail-button svg { width:14px; height:14px; color:inherit!important; }
+body .delete-button { color:var(--loss)!important; }
+body .favorite-button.active { color:var(--accent)!important; border-color:var(--accent)!important; }
+body .battle-log-content,body .opponent-team-content { padding:14px!important; max-height:360px; overflow:auto; overflow-wrap:anywhere; background:var(--surface)!important; color:var(--text)!important; border:1px solid var(--border)!important; border-radius:8px; font:12px/1.6 Consolas,monospace!important; }
+body .copy-team-button { background:var(--raised)!important; color:var(--text)!important; }
+body .pagination { gap:8px; margin:16px 0 0!important; flex-wrap:wrap; }
+body .pagination button { min-width:88px; font-size:11px!important; }
+body #page-info { min-width:0!important; border:0!important; background:transparent!important; box-shadow:none!important; padding:6px!important; color:var(--muted)!important; font-size:11px!important; }
+body .battle-statistics { padding:0!important; margin:24px 0 0!important; background:none!important; border:0!important; }
+body .battle-statistics > h2 { margin:0 0 13px; text-align:left; }
+body .stats-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+body .stats-card.pokemon-stats { grid-column:1/-1; }
+body .stats-card { min-width:0; padding:16px!important; border:1px solid var(--border)!important; border-radius:10px!important; background:var(--surface)!important; box-shadow:none!important; }
+body .stats-card h3 { margin:0 0 12px; }
+body .stats-content { gap:15px!important; }
+body .best-performers,body .worst-performers { background:none!important; min-width:0; }
+body .pokemon-stat-item,body .lead-stat-item,body .stat-row,body .stat-item { color:var(--text)!important; background:transparent!important; border-color:var(--border)!important; min-width:0; }
+body .general-stats-item { gap:10px; padding:9px 0!important; margin:0!important; background:none!important; border-bottom:1px solid var(--border); border-radius:0; box-shadow:none!important; font-size:12px; }
+body .general-stats-item .label { color:var(--muted)!important; margin-right:0!important; }
+body .general-stats-item .value,body .win-rate { color:var(--text)!important; }
+body .show-all-rates { width:100%; margin-top:15px; font-size:11px!important; white-space:normal; }
+body .disclaimer { color:var(--muted)!important; background:transparent!important; border-top:1px solid var(--border); padding:16px 0 0!important; margin:22px 0 0!important; font-size:10px; line-height:1.6; }
+body .settings-menu { z-index:2100; position:fixed; right:12px!important; top:82px; width:290px!important; max-width:calc(100% - 24px); max-height:calc(100vh - 100px); overflow:auto; padding:8px!important; color:var(--text)!important; background:var(--surface)!important; border:1px solid var(--border)!important; border-radius:10px!important; box-shadow:0 12px 40px #0005!important; transition:opacity .15s!important; transform:none!important; }
+body .settings-menu-item { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:40px; margin:0!important; padding:10px!important; border:0!important; border-bottom:1px solid var(--border)!important; color:var(--text)!important; font-size:12px; text-decoration:none; }
+body .settings-menu-item:hover { background:var(--raised)!important; }
+body .settings-menu-item:last-child { border-bottom:0!important; }
+body #date-format-select { width:100%!important; font-size:11px!important; }
+body #history-theme { width:160px; flex:1; }
+body label[for="history-theme"] { flex-shrink:0; }
+body .switch { flex:0 0 36px; width:36px!important; height:20px!important; }
+body .slider { background:var(--bg)!important; border:1px solid var(--border); }
+body .slider::before { width:14px!important; height:14px!important; bottom:2px!important; left:2px!important; background:var(--muted)!important; }
+body .switch input:checked + .slider { background:var(--accent)!important; border-color:var(--accent)!important; }
+body .switch input:checked + .slider::before { transform:translateX(16px)!important; background:var(--accent-ink)!important; }
+body .switch input:focus-visible + .slider { outline:2px solid var(--accent); outline-offset:3px; }
+body .filter-modal { background:#0008!important; backdrop-filter:blur(5px); padding:16px; }
+body .filter-modal-content { width:600px!important; max-width:100%; max-height:calc(100vh - 32px)!important; margin:0!important; background:var(--surface)!important; color:var(--text)!important; border:1px solid var(--border); box-shadow:0 16px 64px #0006; animation:history-modal-in .15s ease!important; }
+@keyframes history-modal-in { from {opacity:0;} to {opacity:1;} }
+body .filter-modal-header,body .filter-modal-footer { padding:17px 20px!important; border-color:var(--border)!important; background:none!important; flex-shrink:0; }
+body .filter-modal-header h2 { font-size:19px!important; }
+body .filter-close-btn { min-height:30px; height:30px; width:30px; padding:0!important; font-size:22px!important; }
+body .filter-modal-body { padding:20px!important; min-height:0; overflow:auto; }
+body .filter-section { margin-bottom:18px; }
+body .filter-section label { font-size:12px; margin-bottom:7px; }
+body .filter-section small { color:var(--muted)!important; font-size:11px; }
+body .filter-btn-primary { color:var(--accent-ink)!important; background:var(--accent)!important; border-color:var(--accent)!important; }
+body .filter-btn-primary:hover:not(:disabled) { filter:brightness(1.08); background:var(--accent)!important; }
+body .rating-range-inputs,body .date-range-inputs { min-width:0; align-items:center; gap:8px; }
+body .rating-range-inputs input,body .date-range-inputs input { flex:1; width:0; }
+body #favorites-filter { appearance:none; position:relative; display:inline-block; flex:none; width:18px; height:18px; margin:0; background:var(--bg); border:1px solid var(--border); border-radius:4px; cursor:pointer; }
+body #favorites-filter:hover { border-color:var(--accent); }
+body #favorites-filter:checked { background:var(--accent); border-color:var(--accent); }
+body #favorites-filter:checked::before { content:""; position:absolute; width:5px; height:9px; left:5px; top:2px; border-right:2px solid var(--accent-ink); border-bottom:2px solid var(--accent-ink); transform:rotate(45deg); }
+body .checkbox-filter-label { display:flex; align-items:center; gap:9px; cursor:pointer; }
+body .history-number,body .history-date { position:relative; flex:1; width:0; min-width:0; }
+body .history-number input,body .history-date input { width:100%!important; padding-right:32px!important; }
+body .history-number input { appearance:textfield; }
+body .history-number input::-webkit-inner-spin-button,body .history-number input::-webkit-outer-spin-button { appearance:none; margin:0; }
+body .history-number-steps { position:absolute; top:1px; right:1px; bottom:1px; width:26px; display:flex; flex-direction:column; border-left:1px solid var(--border); border-radius:0 6px 6px 0; overflow:hidden; }
+body .history-number-steps button { display:grid; place-items:center; flex:1; min-height:0; padding:0!important; border:0!important; border-radius:0!important; color:var(--accent)!important; }
+body .history-number-steps button + button { border-top:1px solid var(--border)!important; }
+body .history-number-steps button::before { content:""; width:5px; height:5px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; }
+body .history-number-steps button[data-step="up"]::before { transform:translateY(1px) rotate(225deg); }
+body .history-number-steps button[data-step="down"]::before { transform:translateY(-1px) rotate(45deg); }
+body .history-number-steps button:focus-visible { outline-offset:-2px; }
+body .history-date input::-webkit-calendar-picker-indicator { display:none; }
+body .history-date-trigger { display:grid; place-items:center; position:absolute; right:1px; top:1px; bottom:1px; width:28px; min-height:0; padding:0!important; border:0!important; border-left:1px solid var(--border)!important; border-radius:0 6px 6px 0!important; color:var(--accent)!important; }
+body .history-date-trigger svg { width:17px; height:17px; }
+body .history-date-trigger:focus-visible { outline-offset:-2px; }
+body #history-calendar { position:fixed; inset:auto; width:300px; max-width:calc(100% - 16px); max-height:calc(100vh - 16px); margin:0; padding:12px; overflow:auto; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:10px; box-shadow:0 14px 40px #0006; }
+body .history-calendar-header { display:flex; align-items:center; gap:6px; margin-bottom:12px; }
+body .history-calendar-header select { width:0; flex:1; padding:6px!important; min-height:32px; font-size:11px!important; }
+body .history-calendar-header select[aria-label="Year"] { flex:0 0 72px; }
+body .history-calendar-nav { display:grid; place-items:center; flex:0 0 28px; width:28px; min-height:32px; padding:0!important; color:var(--accent)!important; }
+body .history-calendar-nav::before { content:""; width:6px; height:6px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(135deg); }
+body .history-calendar-nav[data-direction="next"]::before { transform:rotate(-45deg); }
+body .history-calendar-weekdays,body .history-calendar-days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:3px; }
+body .history-calendar-weekdays { text-align:center; color:var(--muted); font-size:10px; margin-bottom:6px; }
+body .history-calendar-day { min-width:0; min-height:31px; padding:0!important; border-color:transparent!important; background:transparent!important; font-size:11px!important; font-weight:500!important; }
+body .history-calendar-day[data-other-month="true"] { color:var(--muted)!important; }
+body .history-calendar-day[data-today="true"] { border-color:var(--accent)!important; }
+body .history-calendar-day[aria-pressed="true"] { color:var(--accent-ink)!important; background:var(--accent)!important; border-color:var(--accent)!important; font-weight:700!important; }
+body .history-calendar-day[aria-pressed="true"]:hover { background:var(--accent)!important; filter:brightness(1.08); }
+body .history-calendar-footer { display:flex; justify-content:space-between; border-top:1px solid var(--border); margin-top:12px; padding-top:10px; }
+body .history-calendar-footer button { min-height:30px; padding:5px 10px!important; color:var(--accent)!important; font-size:11px!important; }
+body .suggestions-list { border:1px solid var(--border)!important; background:var(--raised)!important; color:var(--text)!important; box-shadow:var(--shadow); }
+body .suggestion-item:hover,body .suggestion-item.active { background:var(--hover)!important; }
+body .replay-import-status { color:var(--muted)!important; }
+body .replay-import-error { color:var(--loss)!important; }
+body .loading-overlay,body .feature-notification { background:color-mix(in srgb,var(--bg) 85%,transparent)!important; }
+body .loading-text { color:var(--text)!important; font-size:14px; }
+body .notification-content { color:var(--text)!important; background:var(--surface)!important; border:1px solid var(--border)!important; border-radius:12px; max-width:calc(100vw - 32px); max-height:calc(100vh - 32px); overflow:auto; }
+body .no-battles-overlay { position:static!important; width:auto!important; height:auto!important; background:none!important; backdrop-filter:none!important; z-index:auto; }
+body .no-battles-message { position:static!important; transform:none!important; width:auto!important; margin:24px 0!important; padding:28px!important; border:1px solid var(--border); border-radius:12px; color:var(--text)!important; background:var(--surface)!important; box-shadow:none!important; text-align:left!important; }
+body[data-history-empty="true"] :is(.history-summary,.history-chart-panel,.history-battles-panel,.battle-statistics) { display:none!important; }
+body .no-battles-timeframe { background:var(--surface)!important; color:var(--text)!important; }
+body .notice-content { background:var(--surface)!important; color:var(--text)!important; border:1px solid var(--border); box-shadow:var(--shadow); }
+/* Win-rate and lead-rate companion pages. */
+body:not(:has(#sidebar)) { display:block!important; padding:28px!important; max-width:1100px; margin:auto!important; }
+body:not(:has(#sidebar)) .history-page-header { margin-bottom:20px; }
+body .search-container { justify-content:flex-start; margin:0 0 16px; }
+body .search-input { width:100%; max-width:420px; }
+body .pokemon-list { border:1px solid var(--border); border-radius:12px; background:var(--surface)!important; box-shadow:var(--shadow); padding:8px 18px!important; }
+body .pokemon-item { min-width:0; padding:12px 0!important; gap:10px; color:var(--text)!important; background:transparent!important; border-color:var(--border)!important; }
+body .pokemon-item:hover { background:var(--raised)!important; }
+body .pokemon-item .pokemon-name { font-weight:650; overflow-wrap:anywhere; min-width:0; }
+body .pokemon-item .pokemon-stats { color:var(--muted)!important; margin-right:0; font-size:11px; }
+body .pokemon-item .win-rate { width:auto; min-width:58px; font-size:13px; }
+body .pokemon-icon,body .pokemon-icons { flex-shrink:0; }
+body .stats-card .pokemon-item { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:3px 9px; box-shadow:none; margin-bottom:0; border-bottom:1px solid var(--border); }
+body .stats-card .pokemon-item :is(.pokemon-icon,.pokemon-icons) { grid-column:1; grid-row:1/3; margin:0; }
+body .stats-card .pokemon-item .pokemon-name { grid-column:2; grid-row:1; font-size:12px; }
+body .stats-card .pokemon-item .pokemon-stats { grid-column:2; grid-row:2; margin:0; font-size:10px; }
+body .stats-card .pokemon-item .win-rate { grid-column:3; grid-row:1/3; min-width:0; font-size:12px; }
+body .filter-no-results { color:var(--muted)!important; }
+@media(max-width:900px) { body:has(#sidebar) { grid-template-columns:170px minmax(0,1fr); } #content { padding:18px!important; } .history-summary article { padding:11px; } .history-summary strong { font-size:20px; } body .stats-grid { grid-template-columns:1fr; } }
+@media(max-width:780px) {
+ .history-table-wrap { border:0; overflow:visible; }
+ body #battle-stats,body #battle-stats tbody { display:block; }
+ body #battle-stats thead { display:none; }
+ body #battle-stats .expandable-row { display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--border); border-radius:8px; margin-bottom:10px; overflow:hidden; }
+ body #battle-stats .expandable-row td { display:block; min-width:0!important; padding:9px 11px!important; border:0!important; }
+ body #battle-stats .expandable-row td::before { content:attr(data-label); display:block; color:var(--muted); font-size:9px; margin-bottom:4px; }
+ body #battle-stats .expandable-row td:first-child,body #battle-stats .expandable-row td:nth-child(2),body #battle-stats .expandable-row td:last-child { grid-column:1/-1; }
+ body #battle-stats .expandable-row td:first-child::before { display:none; }
+ body #battle-stats .expanded-content:not([style*="none"]) { display:block!important; }
+ body #battle-stats .expanded-content td { display:block; padding:12px!important; border:1px solid var(--border)!important; border-radius:8px; margin-bottom:10px; }
+ body .battle-comparison { grid-template-columns:1fr!important; }
+ body .battle-vs { order:-1; }
+ .history-battles-panel { padding:14px; }
+}
+@media(max-width:600px) {
+ body:has(#sidebar) { display:block!important; }
+ #sidebar { position:static!important; min-height:0!important; max-height:none; padding:16px!important; border-right:0!important; border-bottom:1px solid var(--border)!important; }
+ .history-nav-brand { margin-bottom:13px; }
+ #sidebar :is(.username-filter,.server-filter) { display:inline-block; vertical-align:top; width:calc(50% - 6px); margin:0 6px 8px 0!important; }
+ #sidebar h2 { margin:12px 0 6px; }
+ #format-list { display:flex; align-items:center; gap:6px; overflow-x:auto; padding-bottom:4px; }
+ #format-list h3 { display:none; }
+ #format-list .format-button { flex:0 0 auto; width:auto; max-width:200px; margin:0; }
+ #content { padding:18px 14px!important; }
+ .history-page-header { gap:10px; }
+ body h1 { font-size:22px!important; }
+ .history-settings-button span { display:none; }
+ .history-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .history-chart-panel { padding:14px; grid-template-columns:1fr; }
+ body .chart-controls { justify-self:start; }
+ body #chartContainer { height:200px!important; }
+ .history-battles-header { flex-wrap:wrap; gap:10px; }
+ body .filter-modal { padding:10px; }
+ body .filter-modal-content { max-height:calc(100vh - 20px)!important; }
+ body .date-range-inputs { flex-direction:column; align-items:stretch; }
+ body .date-range-inputs .history-date { flex:auto; width:auto; }
+ body .date-range-inputs > span { text-align:center; font-size:10px; color:var(--muted); }
+ body .filter-modal-header,body .filter-modal-footer,body .filter-modal-body { padding:14px!important; }
+ body:not(:has(#sidebar)) { padding:20px 14px!important; }
+ body .pokemon-item { flex-wrap:wrap; gap:8px; }
+ body .pokemon-item .pokemon-name { flex:1; }
+ body .pokemon-item .pokemon-stats { margin-left:40px; }
+ body .pokemon-stats .stats-content { grid-template-columns:1fr; }
+ body .pokemon-list .pokemon-item:not([style*="display: none"]) { display:grid!important; grid-template-columns:auto minmax(0,1fr) auto; gap:4px 10px; }
+ body .pokemon-list .pokemon-item .pokemon-icon { grid-column:1; grid-row:1/3; margin-right:0; }
+ body .pokemon-list .pokemon-item .pokemon-icons { grid-column:1; grid-row:1/3; }
+ body .pokemon-list .pokemon-item .pokemon-name { grid-column:2; grid-row:1; }
+ body .pokemon-list .pokemon-item .pokemon-stats { grid-column:2; grid-row:2; margin:0; }
+ body .pokemon-list .pokemon-item .win-rate { grid-column:3; grid-row:1/3; min-width:0; }
+}

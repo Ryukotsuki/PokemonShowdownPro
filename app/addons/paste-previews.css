@@ -1,0 +1,64 @@
+/* Layout applies in every theme; native and Pro palettes are preserved. */
+.threeisland-link {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.threeisland-tooltip[data-pro-preview] {
+  position: fixed !important;
+  inset: auto;
+  margin: 0 !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 10px !important;
+  font: 12px/1.5 "Segoe UI", Arial, sans-serif;
+  text-decoration: none;
+  box-shadow: 0 6px 24px #0004;
+}
+.threeisland-tooltip[data-pro-preview]:not(:popover-open) { display: none !important; }
+.threeisland-tooltip[data-pro-preview]:popover-open { visibility: visible !important; }
+.threeisland-tooltip[data-pro-preview="team"]:popover-open {
+  display: flex !important;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 8px;
+}
+.threeisland-tooltip[data-pro-preview] > .threeisland-images {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+}
+.threeisland-tooltip[data-pro-preview] > .threeisland-images > span {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
+}
+.threeisland-tooltip[data-pro-preview] .threeisland-set { flex: 0 0 40px; }
+.threeisland-tooltip[data-pro-preview] > button {
+  align-self: stretch;
+  box-sizing: border-box;
+  max-width: 100%;
+  margin: 0 !important;
+  min-height: 30px;
+  white-space: normal;
+  cursor: pointer;
+}
+.threeisland-tooltip[data-pro-preview] > pre {
+  color: inherit;
+  background: transparent;
+  margin: 0;
+  font: 12px/1.5 Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: visible;
+  text-align: left;
+}
+.threeisland-set:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 3px; }

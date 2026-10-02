@@ -1,0 +1,19 @@
+html { color-scheme: dark; background: #102331; }
+body { color: #e7f4fc !important; background: linear-gradient(145deg,#1b3548,#102331) !important; font-family: "Segoe UI",Arial,sans-serif !important; }
+body :is(h1,h2,h3,label,p) { color: inherit; }
+body :is(#sidebar,#content,#chartContainer,.expanded-content,.no-battles-message,.settings-menu,.notification-content,.modal-content,.summary-card,.stat-card) { color:#e7f4fc!important; background-color:#172f40!important; border-color:#456b82!important; }
+body :is(th,td) { border-color:#456b82!important; }
+body th { background:#23465c!important; color:#e7f4fc!important; }
+body :is(button,input,select,textarea) { color:#e7f4fc!important; background-color:#203d51!important; border-color:#5c8ba6!important; border-radius:5px!important; font:inherit; }
+body button { cursor:pointer; }
+body :is(.loading-overlay,.no-battles-overlay) { color:#e7f4fc!important; background:#102331ed!important; }
+body .loading-text,body :is(.no-battles-message,.notification-content) :is(h2,p) { color:#e7f4fc!important; }
+body button:hover { background-color:#315f7a!important; }
+body button:disabled { opacity:.5; cursor:default; }
+body .option[state="1"] button { background-color:#66c0f4!important; border-color:#9cddff!important; }
+body .option[state="2"] button { background-color:#3a87b0!important; }
+body .option[state="1"] button::after { content:"✓";color:#102337;font-weight:700; }
+body .option[state="2"] button::after { content:"•";color:#e7f4fc; }
+body :is(button,input,select,textarea):focus-visible { outline:2px solid #66c0f4; outline-offset:2px; }
+body input[type=checkbox] { accent-color:#66c0f4; }
+body a { color:#82c8ee!important; }

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' showdown-pro://assets; object-src 'none'; base-uri 'none'">
+  <title>Pokémon Showdown Pro</title>
+  <link rel="icon" href="showdown-pro://assets/icons/icon.png" type="image/png">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <aside class="sidebar" aria-label="Battle hub">
+    <div class="hub-controls">
+      <button id="sidebar-toggle" class="icon-button" type="button" aria-label="Collapse Battle Hub" aria-expanded="true" aria-controls="hub-content">☰</button>
+    </div>
+    <div id="hub-content">
+      <header class="hero">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"><img src="showdown-pro://assets/icons/icon.png" alt="" width="42" height="42"></span><div><span class="eyebrow">POKÉMON SHOWDOWN PRO</span><h1>Battle hub <span id="app-version" class="app-version"></span></h1></div></div>
+        <div class="connection"><span class="connection-dot" aria-hidden="true"></span><span id="client-status">Connecting to Showdown…</span></div>
+      </header>
+      <nav class="hub-tabs" role="tablist" aria-label="Battle hub sections">
+        <button id="tab-battle" type="button" role="tab" aria-selected="true" aria-controls="page-battle" data-tab="battle">Battle</button>
+        <button id="tab-addons" type="button" role="tab" aria-selected="false" aria-controls="page-addons" data-tab="addons" tabindex="-1">Add-ons</button>
+        <button id="tab-messages" type="button" role="tab" aria-selected="false" aria-controls="page-messages" data-tab="messages" tabindex="-1">Messages</button>
+        <button id="tab-history" type="button" role="tab" aria-selected="false" aria-controls="page-history" data-tab="history" tabindex="-1">History</button>
+      </nav>
+      <p id="hub-error" class="error hub-notice" role="alert" hidden></p>
+      <p id="post-match-status" class="inline-status hub-notice" role="status" hidden></p>
+      <p id="reload-pending" class="inline-status hub-notice" role="status" hidden>Reload Showdown to apply Showdex and add-on changes.</p>
+      <main class="dashboard">
+        <div id="page-battle" class="tab-page" role="tabpanel" aria-labelledby="tab-battle">
+          <section class="activity" aria-labelledby="activity-title"><div class="activity-heading"><h2 id="activity-title">Active battles</h2><span>LIVE VIEW</span></div><div id="battles" aria-live="polite"></div></section>
+          <section class="module" aria-labelledby="match-flow-title">
+            <div class="module-heading"><span class="module-index">01</span><div><h2 id="match-flow-title">Match flow</h2><p>Choose what happens during a match.</p></div></div>
+            <label class="setting-row" for="auto-start-timer"><span><strong>Auto-start battle timer</strong><small>Start the turn timer when you enter a battle</small></span><input type="checkbox" id="auto-start-timer"></label>
+            <label class="setting-row" for="save-winning-replays"><span><strong>Upload winning replays</strong><small>Save wins for later viewing</small></span><input type="checkbox" id="save-winning-replays"></label>
+            <label class="setting-row" for="save-losing-replays"><span><strong>Upload losing replays</strong><small>Save losses to review and improve</small></span><input type="checkbox" id="save-losing-replays"></label>
+            <p class="module-note">Replay uploads run after your selected results and appear in History.</p>
+            <p id="settings-error" class="error" role="alert"></p>
+          </section>
+          <details class="module services"><summary>Systems</summary>
+            <label class="setting-row" for="showdex-enabled"><span><strong>Showdex</strong><small id="showdex">Loading…</small></span><input id="showdex-enabled" type="checkbox" checked></label>
+            <p class="helper">Reload Showdown to apply Showdex changes.</p>
+          </details>
+        </div>
+        <div id="page-addons" class="tab-page" role="tabpanel" aria-labelledby="tab-addons" hidden>
+          <section class="module" aria-labelledby="addons-title">
+            <div class="module-heading"><span class="module-index">01</span><div><h2 id="addons-title">Add-ons</h2><p>Choose the extras you want in Showdown.</p></div></div>
+            <div id="addons-list"></div>
+            <p class="module-note">Switches and settings are saved. Reload Showdown to apply changes. Turn an add-on off to use the original client behavior.</p>
+          </section>
+          <section class="module" aria-labelledby="updates-title">
+            <div class="module-heading"><span class="module-index">02</span><div><h2 id="updates-title">Updates</h2><p>Keep add-ons and Showdex up to date.</p></div></div>
+            <label class="setting-row" for="auto-update-addons"><span><strong>Automatic updates</strong><small>Check daily between battles</small></span><input type="checkbox" id="auto-update-addons"></label>
+            <p id="addon-update-status" class="helper" role="status">Updates have not been checked yet.</p>
+            <button id="check-addon-updates" class="action-button" type="button">Check now</button>
+            <p class="module-note">Tested updates apply when you restart Pro. Your settings and Pro styling are preserved.</p>
+          </section>
+        </div>
+        <div id="page-messages" class="tab-page" role="tabpanel" aria-labelledby="tab-messages" hidden>
+          <section class="module" aria-labelledby="messages-title">
+            <div class="module-heading"><span class="module-index">01</span><div><h2 id="messages-title">Match messages</h2><p>Your own greeting and closing message.</p></div></div>
+            <label class="setting-row" for="start-message-enabled"><span><strong>Start of match</strong><small>Send a greeting when your battle starts</small></span><input type="checkbox" id="start-message-enabled"></label>
+            <label class="field-label" for="start-message-text">Greeting</label>
+            <textarea id="start-message-text" rows="3" maxlength="280" placeholder="Good luck, have fun!" aria-describedby="start-message-count"></textarea><p id="start-message-count" class="character-count">0 / 280</p>
+            <label class="setting-row" for="end-message-enabled"><span><strong>End of match</strong><small>Send after a win, loss, or tie</small></span><input type="checkbox" id="end-message-enabled"></label>
+            <label class="field-label" for="end-message-text">Closing message</label>
+            <textarea id="end-message-text" rows="3" maxlength="280" placeholder="Good game!" aria-describedby="end-message-count"></textarea><p id="end-message-count" class="character-count">0 / 280</p>
+            <button id="save-messages" class="action-button" type="button">Save messages</button>
+            <p class="module-note">Messages work only in battles you play. Each sends once per match. Use plain chat text, without commands or line breaks.</p>
+            <p id="messages-save-status" class="helper" role="status"></p>
+            <p id="messages-error" class="error" role="alert"></p>
+            <p id="message-status" class="inline-status" role="status" hidden></p>
+          </section>
+        </div>
+        <div id="page-history" class="tab-page" role="tabpanel" aria-labelledby="tab-history" hidden>
+          <section class="module record" aria-labelledby="record-title">
+            <div class="module-heading"><span class="module-index">01</span><div><h2 id="record-title">Battle record</h2><p>Your results at a glance.</p></div></div>
+            <div class="record-grid"><div class="record-row"><strong>This session</strong><span id="session-record">0 W · 0 L · 0 T</span><small id="session-ratio">W/L — · Win rate —</small></div><div class="record-row"><strong>All time</strong><span id="all-time-record">0 W · 0 L · 0 T</span><small id="all-time-ratio">W/L — · Win rate —</small></div></div>
+            <p class="module-note">Tracks battles observed while the app is open.</p><p id="statistics-error" class="error" role="alert" hidden></p>
+          </section>
+          <section class="module" aria-labelledby="replays-title">
+            <div class="module-heading"><span class="module-index">02</span><div><h2 id="replays-title">Saved replays</h2><p>Your 20 most recent uploaded battles.</p></div></div>
+            <div id="recent-replays"></div>
+          </section>
+        </div>
+      </main>
+      <footer><button id="reload" type="button">↻ <span>Reload Showdown</span></button><p>Showdex and your add-ons work alongside the official client.</p></footer>
+    </div>
+  </aside>
+  <script src="panel.js"></script>
+</body>
+</html>

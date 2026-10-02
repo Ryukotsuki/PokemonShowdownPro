@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Did it Tera?</title>
+  <link rel="stylesheet" href="pro-settings.css">
+</head>
+<body>
+  <main class="settings-shell">
+    <header>
+      <span class="eyebrow">ADD-ON SETTINGS</span>
+      <h1>Did it Tera?</h1>
+      <p>Customize the Terastallization reminder in battle.</p>
+    </header>
+    <form id="settings">
+      <section class="settings-list" aria-label="Tera reminder settings">
+        <div class="setting"><span><label for="ditFontSize"><strong>Font size</strong></label><small>Reminder text size, from 10 to 13 px.</small></span><div class="number-control"><input id="ditFontSize" type="number" min="10" max="13" step="1" required disabled><div class="number-stepper"><button type="button" data-step="up" aria-label="Increase font size" disabled></button><button type="button" data-step="down" aria-label="Decrease font size" disabled></button></div></div></div>
+        <div class="setting"><span><strong id="color-label">Text color</strong><small>Choose the reminder's text color.</small></span><input id="ditTextColor" type="hidden"><button id="color-open" class="color-control" type="button" aria-haspopup="dialog" aria-controls="color-picker" aria-labelledby="color-label color-value" disabled><span id="color-swatch" aria-hidden="true"></span><span id="color-value">#E7F4FC</span></button></div>
+        <label class="setting" for="ditShowNicknames"><span><strong>Show nicknames</strong><small>Use nicknames in the reminder.</small></span><input id="ditShowNicknames" type="checkbox" role="switch" disabled></label>
+        <label class="setting" for="ditShowBothUserTera"><span><strong>Show both players' Tera</strong><small>Include your Pokémon and the opponent's.</small></span><input id="ditShowBothUserTera" type="checkbox" role="switch" disabled></label>
+      </section>
+      <footer><p id="status" role="status">Changes apply to new battles.</p><div class="footer-actions"><button id="save" class="primary" type="submit" disabled>Save</button><button id="close" type="button">Done</button></div></footer>
+    </form>
+  </main>
+  <dialog id="color-picker" aria-labelledby="picker-title">
+    <h2 id="picker-title">Text color</h2>
+    <p class="picker-description">Choose a color for the Tera reminder.</p>
+    <div class="color-preview"><span id="picker-swatch" aria-hidden="true"></span><label for="color-hex">Hex color<input id="color-hex" type="text" maxlength="7" pattern="#?[0-9a-fA-F]{6}" required spellcheck="false" autocomplete="off" aria-describedby="color-hint"></label></div>
+    <p id="color-hint" class="color-hint">Enter a six-digit hex color, such as #66C0F4.</p>
+    <div class="color-channels">
+      <label for="color-red"><span>Red</span><input id="color-red" type="range" min="0" max="255" step="1"><output id="red-value" for="color-red"></output></label>
+      <label for="color-green"><span>Green</span><input id="color-green" type="range" min="0" max="255" step="1"><output id="green-value" for="color-green"></output></label>
+      <label for="color-blue"><span>Blue</span><input id="color-blue" type="range" min="0" max="255" step="1"><output id="blue-value" for="color-blue"></output></label>
+    </div>
+    <p class="palette-label">Quick colors</p>
+    <div class="color-palette" role="group" aria-label="Quick colors">
+      <button type="button" data-color="#e7f4fc" aria-label="Ice white" aria-pressed="false"></button>
+      <button type="button" data-color="#66c0f4" aria-label="Pro blue" aria-pressed="false"></button>
+      <button type="button" data-color="#8abaf0" aria-label="Soft blue" aria-pressed="false"></button>
+      <button type="button" data-color="#65d6ad" aria-label="Mint" aria-pressed="false"></button>
+      <button type="button" data-color="#f5cd70" aria-label="Gold" aria-pressed="false"></button>
+      <button type="button" data-color="#f18a9b" aria-label="Rose" aria-pressed="false"></button>
+      <button type="button" data-color="#b79aee" aria-label="Lavender" aria-pressed="false"></button>
+      <button type="button" data-color="#222222" aria-label="Charcoal" aria-pressed="false"></button>
+    </div>
+    <div class="picker-actions"><button id="color-cancel" type="button">Cancel</button><button id="color-apply" type="button" class="primary">Use color</button></div>
+  </dialog>
+  <script src="scripts/options.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Enhanced Tooltips</title>
+  <link rel="stylesheet" href="pro-settings.css">
+</head>
+<body>
+  <main class="settings-shell">
+    <header>
+      <span class="eyebrow">ADD-ON SETTINGS</span>
+      <h1>Enhanced Tooltips</h1>
+      <p>Choose what appears in Pokémon tooltips.</p>
+    </header>
+    <label class="setting" for="stats">
+      <span><strong>Show base stats</strong><small>Include base stats when hovering over a Pokémon.</small></span>
+      <input id="stats" type="checkbox" role="switch" disabled>
+    </label>
+    <footer>
+      <p id="status" role="status">Changes apply to the next tooltip.</p>
+      <button id="close" type="button">Done</button>
+    </footer>
+  </main>
+  <script src="pro-settings.js"></script>
+</body>
+</html>

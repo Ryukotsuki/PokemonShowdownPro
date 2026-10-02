@@ -1,0 +1,8 @@
+:root { color-scheme: dark; font: 600 11px/1.4 "Segoe UI", Arial, sans-serif; color: #e7f4fc; }
+html, body { margin: 0; background: transparent; }
+body { padding: 2px; }
+#label { padding: 8px 10px; text-align: center; white-space: normal; overflow-wrap: break-word; border: 1px solid #5c8ba6; border-radius: 6px; background: linear-gradient(#23465c, #172f40); box-shadow: 0 2px 5px #0005, inset 0 1px #ffffff18; }
+:root[data-theme="light"] { color-scheme: light; color: #222; }
+:root[data-theme="light"] #label { background: #fff; border-color: #aaa; box-shadow: 0 2px 5px #0002; }
+:root[data-theme="dark"] { color: #eee; }
+:root[data-theme="dark"] #label { background: #333; border-color: #777; box-shadow: 0 2px 5px #0005; }

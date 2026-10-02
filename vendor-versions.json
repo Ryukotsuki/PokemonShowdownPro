@@ -1,0 +1,10 @@
+{
+  "pokemon-showdown-client": {
+    "remote": "https://github.com/smogon/pokemon-showdown-client.git",
+    "commit": "f7dac498bb00b920227a32502267d7de358ae965"
+  },
+  "showdex": {
+    "remote": "https://github.com/doshidak/showdex.git",
+    "commit": "165abdb05ad08c5b286f71e21cc1907852efd76f"
+  }
+}

@@ -1,0 +1,73 @@
+.ditTeraInfo {
+  position: absolute;
+  box-sizing: border-box;
+  width: 85px;
+  padding-top: 20px;
+  color: var(--dit-text-color, #222222);
+  text-align: left;
+  line-height: 1.4;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+:is(html.dark, body.dark) .ditTeraInfo { color: var(--dit-text-color, #e7f4fc); }
+.ditTeraLabel, .ditPokemonName, .ditTeraType { display: block; }
+.ditTeraLabel, .ditTypeLabel { font-weight: 700; }
+.ditPokemonName { font-weight: 400; overflow-wrap: anywhere; }
+.ditTeraType { margin-top: 3px; }
+.ditTypeLabel { display: block; }
+.ditCloseInfo { border: 0; padding: 0; color: inherit; background: transparent; font: inherit; line-height: 1; }
+.ditCloseInfo:focus-visible { opacity: 1; transform: none; outline: 2px solid currentColor; }
+html.showdown-pro .ditTeraInfo {
+  width: 86px;
+  padding: 7px 8px;
+  border: 1px solid #527b94;
+  border-radius: 7px;
+  color: var(--dit-text-color, #e7f4fc);
+  background: linear-gradient(145deg, #203e52, #172e40);
+  box-shadow: 0 3px 10px #0003, inset 0 1px #ffffff0a;
+  text-shadow: none;
+}
+html.showdown-pro .ditTeraInfo[data-side="you"] { left: 7px !important; }
+html.showdown-pro .ditTeraInfo[data-side="opponent"] { right: 7px !important; }
+html.showdown-pro .ditTeraLabel {
+  margin: 0 18px 4px 0;
+  color: #87c8eb;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+html.showdown-pro .ditPokemonName { font-weight: 650; line-height: 1.35; }
+html.showdown-pro .ditTeraType {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 6px;
+  padding: 2px 5px;
+  border: 1px solid #476c83;
+  border-radius: 4px;
+  color: #d7ecf8;
+  background: #24465b;
+  font-size: 10px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+html.showdown-pro .ditTypeLabel { display: none; }
+html.showdown-pro .ditCloseInfo {
+  display: grid;
+  place-items: center;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #a5c6da;
+  background: transparent;
+  font-size: 14px;
+  opacity: 1;
+  transform: none;
+  transition: background .15s, color .15s;
+}
+html.showdown-pro .ditCloseInfo:hover { color: #f0faff; background: #315b74; border-color: #6396b3; }
+html.showdown-pro .ditCloseInfo:focus-visible { outline: 2px solid #87d0f5; outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) { .ditCloseInfo { transition: none !important; } }

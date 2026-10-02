@@ -1,0 +1,47 @@
+{
+  "name": "pokemon-showdown-pro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Official Pokémon Showdown client with Showdex, Pro styling, and optional add-ons",
+  "license": "AGPL-3.0-or-later",
+  "main": "app/main.cjs",
+  "scripts": {
+    "start": "node scripts/start.cjs",
+    "setup": "node scripts/setup.cjs",
+    "build:showdex": "node scripts/build-showdex.mjs",
+    "test": "node --test tests/*.test.cjs",
+    "download:addons": "node scripts/download-addons.cjs",
+    "audit:addons": "node node_modules/electron/cli.js scripts/audit-addon-loading.cjs",
+    "audit:hp-bars": "node node_modules/electron/cli.js scripts/audit-hp-bars.cjs",
+    "audit:paste-previews": "node node_modules/electron/cli.js scripts/audit-paste-previews.cjs",
+    "audit:history": "node node_modules/electron/cli.js scripts/audit-history.cjs",
+    "audit:import-editor": "node node_modules/electron/cli.js scripts/audit-import-editor.cjs",
+    "audit:tera-notices": "node node_modules/electron/cli.js scripts/audit-tera-notices.cjs",
+    "check:addon-updates": "node scripts/check-addon-updates.cjs",
+    "test:systems": "node scripts/start.cjs --smoke-test",
+    "smoke": "node scripts/start.cjs --smoke-test",
+    "test:themes": "node scripts/start.cjs --smoke-test --theme-only",
+    "audit:theme": "node scripts/start.cjs --smoke-test --theme-audit",
+    "audit:seasons": "node scripts/start.cjs --smoke-test --theme-audit --seasons-only",
+    "audit:chat": "node scripts/start.cjs --smoke-test --theme-audit --chat-rooms",
+    "audit:tournaments": "node scripts/start.cjs --smoke-test --theme-audit --tournaments-only",
+    "audit:ladder": "node scripts/start.cjs --smoke-test --theme-audit --ladder-only",
+    "audit:builder": "node scripts/start.cjs --smoke-test --theme-audit --builder-only",
+    "audit:showdex": "node scripts/start.cjs --smoke-test --theme-audit --showdex-only",
+    "audit:new-client": "node scripts/start.cjs --smoke-test --theme-audit --new-client",
+    "audit:new-surfaces": "node scripts/start.cjs --smoke-test --theme-audit --new-surfaces",
+    "audit:new-ladder": "node scripts/start.cjs --smoke-test --theme-audit --new-surfaces --new-ladder-only",
+    "audit:dropdowns": "node scripts/start.cjs --smoke-test --theme-audit --dropdown-controls",
+    "audit:hover": "node scripts/start.cjs --smoke-test --theme-audit --hover-only",
+    "audit:formats": "node scripts/start.cjs --smoke-test --theme-audit --formats-only",
+    "test:navigation": "node scripts/start.cjs --smoke-test --theme-audit --navigation-only",
+    "audit:hub": "node scripts/start.cjs --smoke-test --sidebar-only"
+  },
+  "devDependencies": {
+    "@electron-internal/extract-zip": "1.0.5",
+    "electron": "44.4.5"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

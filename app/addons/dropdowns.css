@@ -1,0 +1,20 @@
+/* Use Chromium's customizable select so native selection and keyboard controls stay intact. */
+:root { --dropdown-surface:var(--surface); --dropdown-border:var(--border); --dropdown-selected:#d9ebf7; --dropdown-hover:#e7f1f8; --dropdown-ink:var(--text); }
+:root[data-theme="pro"] { --dropdown-surface:#192f40; --dropdown-border:#6b98af; --dropdown-selected:#2c5a74; --dropdown-hover:#397a9c; --dropdown-ink:#f5fbff; }
+:root[data-theme="dark"] { --dropdown-selected:#394b61; --dropdown-hover:#455c77; }
+@supports (appearance:base-select) {
+  body select:not([multiple]):not([size]),
+  body select:not([multiple]):not([size])::picker(select) { appearance:base-select!important; }
+  body select:not([multiple]):not([size]) { display:inline-flex!important; align-items:center; gap:8px; white-space:nowrap; cursor:pointer; }
+  :root[data-theme="pro"] body select:not([multiple]):not([size]) { background:linear-gradient(180deg,#315e7a,#203d51)!important; border-color:var(--dropdown-border)!important; }
+  body select:not([multiple]):not([size]):hover:not(:disabled) { border-color:var(--accent)!important; }
+  body select:not([multiple]):not([size]):disabled { opacity:.5; cursor:default; }
+  body select:not([multiple]):not([size])::picker-icon { content:""!important; flex:none; align-self:center; width:8px; height:8px; margin:0 2px 3px auto; border:0; border-right:2px solid var(--accent); border-bottom:2px solid var(--accent); transform:rotate(45deg); }
+  body select:not([multiple]):not([size]):open::picker-icon { margin-bottom:-3px; transform:rotate(225deg); }
+  body select:not([multiple]):not([size])::picker(select) { box-sizing:border-box; min-width:max(180px,anchor-size(width)); max-width:calc(100vw - 24px); max-height:min(320px,60vh); padding:5px; background:var(--dropdown-surface); color:var(--text); border:1px solid var(--dropdown-border); border-radius:7px; box-shadow:0 14px 30px #0006,inset 0 1px #ffffff17; overflow:auto; scrollbar-color:var(--border) var(--dropdown-surface); }
+  body select:not([multiple]):not([size]) option { display:flex; align-items:center; gap:8px; min-height:34px; padding:8px 9px; color:var(--text); background:transparent; border-radius:4px; font:12px/1.4 "Segoe UI",Arial,sans-serif; white-space:normal; overflow-wrap:anywhere; cursor:pointer; }
+  body select:not([multiple]):not([size]) option:checked { color:var(--dropdown-ink); background:var(--dropdown-selected); }
+  body select:not([multiple]):not([size]) option:is(:hover,:focus,:focus-visible) { color:var(--dropdown-ink); background:var(--dropdown-hover); outline:none; }
+  body select:not([multiple]):not([size]) option:disabled { opacity:.5; cursor:default; }
+  body select:not([multiple]):not([size]) option::checkmark { content:"✓"; flex:0 0 14px; color:var(--accent); font-weight:700; }
+}
