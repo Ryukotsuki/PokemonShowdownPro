@@ -15,10 +15,10 @@ function runProcess(command,args,{cwd,env=process.env,signal,timeout=10*60*1000,
     signal?.addEventListener('abort',stop,{once:true});if(signal?.aborted)stop();
   });
 }
-function prepareUpdates(root,directory) {
+function prepareUpdates(root,directory,{verifyBundled=false}={}) {
   return async({stage,current,signal,notify})=>{
     const fs=require('node:fs'),scratch=fs.mkdtempSync(path.join(os.tmpdir(),'ps-au-'));
-    fs.writeFileSync(path.join(stage,'request.json'),JSON.stringify({current,directory,scratch}));
+    fs.writeFileSync(path.join(stage,'request.json'),JSON.stringify({current,directory,scratch,verifyBundled}));
     const bundledNode=path.join(root,'build/update-runtime',process.platform==='win32'?'node.exe':'node');
     const node=fs.existsSync(bundledNode)?bundledNode:process.execPath;
     const env={...process.env,ELECTRON_RUN_AS_NODE:'1',SHOWDOWN_PRO_ELECTRON_EXECUTABLE:process.versions.electron?process.execPath:require('electron'),SHOWDOWN_PRO_APP_ROOT:root};

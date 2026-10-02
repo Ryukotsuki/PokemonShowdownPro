@@ -32,7 +32,7 @@ The workflow files belong at:
 4. Wait for Windows, both macOS architectures, and Linux to finish.
 5. Download each platform's artifact from the completed workflow run.
 
-Builds also run on pushes to `main`/`master` and on pull requests. Each job runs unit tests, packages the app, and checks the actual packaged runtime in an isolated, muted profile. Packaged checks require access to Pokémon Showdown, the Chrome extension download service, and GitHub.
+Builds also run on pushes to `main`/`master` and on pull requests. Each job runs unit tests, packages the app, and checks the actual packaged runtime in an isolated, muted profile. Packaged checks validate the shipped Showdex and add-ons through the update worker, including both client compatibility audits, native source extraction, and bundled pnpm. They require access to Pokémon Showdown; downloading newer releases is reserved for normal app update checks. If package verification fails, download the `Package-verification` artifact for detailed diagnostics.
 
 ## Publish version 1.0.0
 

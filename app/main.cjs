@@ -301,7 +301,7 @@ async function createWindow() {
   if(smoke) {preferences.showdexEnabled=true;preferences.addons=Object.fromEntries(addonCatalog.map(addon=>[addon.key,false]));}
   appliedShowdex=preferences.showdexEnabled;
   const updateDirectory=smoke?path.join(root,'test-results/smoke-updates'):app.isPackaged?path.join(app.getPath('userData'),'addon-updates'):path.join(root,'build/addon-updates');
-  addonUpdates=new AddonUpdates({directory:updateDirectory,prepare:smoke?async()=>({}):prepareUpdates(root,updateDirectory),canCheck:updatesIdle,onChange:publish});
+  addonUpdates=new AddonUpdates({directory:updateDirectory,prepare:smoke?async()=>({}):prepareUpdates(root,updateDirectory,{verifyBundled:verifyRelease}),canCheck:updatesIdle,onChange:publish});
   if(!smoke)addonUpdates.activatePending();
   if(smoke) {
     preferences.sidebarCollapsed=false;preferences.sidebarTab='battle';preferences.messages={...defaults.messages};

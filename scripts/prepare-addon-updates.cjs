@@ -15,6 +15,12 @@ const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
 const electron=process.env.SHOWDOWN_PRO_ELECTRON_EXECUTABLE||(process.versions.electron?process.execPath:require('electron'));
 const auditArgs=(component,target)=>[root,component==='addons'?'--audit-addon-update':'--audit-showdex-update',...(component==='addons'?['--update-stage',target]:[target]),...(process.env.SHOWDOWN_PRO_UPDATE_NO_SANDBOX==='1'?['--no-sandbox']:[])];
 const electronEnv={...process.env};delete electronEnv.ELECTRON_RUN_AS_NODE;
+async function audit(component) {
+  const log=text=>fs.appendFileSync(path.join(stage,component+'-validation.log'),text);
+  const env={...electronEnv,SHOWDOWN_PRO_UPDATE_PROFILE:path.join(scratch,component+'-profile')};
+  if(component==='addons')Object.assign(env,{SHOWDOWN_PRO_UPDATE_BUILD_ROOT:path.join(scratch,'addons'),SHOWDOWN_PRO_UPDATE_AUDIT_ROOT:path.join(scratch,'audit-addons')});
+  await runProcess(electron,auditArgs(component,stage),{cwd:root,env,timeout:4*60*1000,onOutput:log});
+}
 async function addons() {
   say('Checking browser add-on versions…');
   const target=path.join(stage,'browser-addons'),versions={},packages=[];
@@ -34,7 +40,7 @@ async function addons() {
   if(!changed){removeStage(stage,'browser-addons');return;}
   fs.writeFileSync(path.join(target,'versions.json'),JSON.stringify(packages,null,2));
   say('Testing updated add-ons in both clients…');
-  await runProcess(electron,auditArgs('addons',stage),{cwd:root,env:{...electronEnv,SHOWDOWN_PRO_UPDATE_PROFILE:path.join(scratch,'addons-profile'),SHOWDOWN_PRO_UPDATE_BUILD_ROOT:path.join(scratch,'addons'),SHOWDOWN_PRO_UPDATE_AUDIT_ROOT:path.join(scratch,'audit-addons')},timeout:4*60*1000,onOutput:text=>fs.appendFileSync(path.join(stage,'addons-validation.log'),text)});
+  await audit('addons');
   result.addons={versions,sha256:treeHash(target)};
 }
 async function showdex() {
@@ -56,14 +62,42 @@ async function showdex() {
   await runProcess(process.execPath,[path.join(root,'node_modules/pnpm/bin/pnpm.cjs'),'install','--frozen-lockfile','--ignore-scripts','--config.manage-package-manager-versions=false'],{cwd:source,env:buildEnv,timeout:10*60*1000,onOutput:log});
   await runProcess(process.execPath,[path.join(root,'scripts/build-showdex.mjs'),'--source',source,'--output',path.join(stage,'showdex')],{cwd:root,timeout:6*60*1000,onOutput:log});
   say('Testing updated Showdex in both clients…');
-  await runProcess(electron,auditArgs('showdex',stage),{cwd:root,env:{...electronEnv,SHOWDOWN_PRO_UPDATE_PROFILE:path.join(scratch,'showdex-profile')},timeout:4*60*1000,onOutput:log});
+  await audit('showdex');
   fs.writeFileSync(path.join(stage,'showdex/upstream-source.zip'),data);
   fs.copyFileSync(path.join(source,'LICENSE'),path.join(stage,'showdex/UPSTREAM-LICENSE.txt'));
   result.showdex={version,tag,source:'https://github.com/doshidak/showdex/releases/tag/'+encodeURIComponent(tag),archiveSha256:sha256(data),sha256:treeHash(path.join(stage,'showdex'))};
 }
+async function bundledAddons() {
+  say('Validating bundled add-ons through the update worker…');
+  const target=path.join(stage,'browser-addons'),versions={};
+  fs.cpSync(path.join(root,'vendor/browser-addons'),target,{recursive:true});
+  for(const key of Object.keys(extensionIds)) {
+    const manifest=read(path.join(target,key,'manifest.json'));
+    if(!manifest.version||!manifest.content_scripts?.length)throw new Error(key+': unsupported extension manifest');
+    versions[key]=manifest.version;
+  }
+  await audit('addons');
+  result.addons={versions,sha256:treeHash(target)};
+}
+async function bundledShowdex() {
+  say('Validating bundled Showdex and native update tools…');
+  const version=read(path.join(root,'vendor/showdex/package.json')).version;
+  const source=path.join(scratch,'showdex-source');
+  await unpack(fs.readFileSync(path.join(root,'build/upstream/showdex-source.zip')),source);
+  if(read(path.join(source,'package.json')).version!==version)throw new Error('Bundled Showdex source version mismatch');
+  const pnpmVersion=await runProcess(process.execPath,[path.join(root,'node_modules/pnpm/bin/pnpm.cjs'),'--version'],{cwd:root,timeout:30000});
+  if(pnpmVersion.trim()!==read(path.join(root,'package.json')).dependencies.pnpm)throw new Error('Bundled pnpm version mismatch');
+  const target=path.join(stage,'showdex');
+  fs.cpSync(path.join(root,'build/showdex'),target,{recursive:true});
+  await audit('showdex');
+  result.showdex={version,sha256:treeHash(target)};
+}
 (async()=>{
+  // Release verification uses the exact shipped candidates, independent of live
+  // release APIs. Both modes run the same compatibility audits before staging.
+  const candidates=request.verifyBundled?[['addons',bundledAddons],['showdex',bundledShowdex]]:[['addons',addons],['showdex',showdex]];
   // Separate failures let a compatible calculator update survive an add-on failure.
-  for(const [name,prepare] of [['addons',addons],['showdex',showdex]]) {
+  for(const [name,prepare] of candidates) {
     try{await prepare();}catch(error){fs.appendFileSync(path.join(stage,name+'-validation.log'),'\n'+error.stack+'\n');result.errors.push((name==='addons'?'Add-ons':'Showdex')+': the new version could not pass its update checks.');if(!result[name])removeStage(stage,name==='addons'?'browser-addons':'showdex');}
   }
   for(const relative of ['build','test-results','showdex-source','showdex-archive'])removeStage(stage,relative);

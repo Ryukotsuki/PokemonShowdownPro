@@ -16,7 +16,15 @@ delete env.ELECTRON_RUN_AS_NODE;delete env.NODE_PATH;
   const check="import('@electron-internal/extract-zip').then(m=>{if(typeof m.extract!=='function')throw Error('Extractor missing');console.log('Bundled Node and native extractor passed',process.version)}).catch(e=>{console.error(e);process.exitCode=1})";
   await runProcess(node,['-e',check],{cwd:appRoot,env,timeout:30000,onOutput:text=>process.stdout.write(text)});
   await runProcess(executable,['--verify-release',...(process.platform==='linux'?['--no-sandbox']:[])],{cwd:appRoot,env,timeout:15*60*1000,onOutput:text=>process.stdout.write(text)});
-})().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{
+})().catch(error=>{
+  console.error(error);process.exitCode=1;
+  const diagnostics=path.join(root,'test-results','package-verification-'+process.platform+'-'+process.arch);
+  fs.mkdirSync(diagnostics,{recursive:true});
+  fs.writeFileSync(path.join(diagnostics,'failure.log'),error.stack+'\n');
+  const log=path.join(profile,'addon-updates/last-check.log');
+  if(fs.existsSync(log))fs.copyFileSync(log,path.join(diagnostics,'update-check.log'));
+  console.error('Package verification diagnostics saved to '+diagnostics);
+}).finally(()=>{
   if(!profile.startsWith(path.resolve(os.tmpdir())+path.sep))throw new Error('Invalid release test profile');
   fs.rmSync(profile,{recursive:true,force:true,maxRetries:10,retryDelay:200});
 });
