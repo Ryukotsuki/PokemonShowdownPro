@@ -126,7 +126,7 @@ Showdex's theme is independent of the main client. Add-on windows follow the app
 
 **Battle Hub → Add-ons → App updates** checks stable GitHub releases once a day between battles. Installed Windows builds and Linux AppImages download new versions automatically and verify their SHA-512 checksums. Choose **Restart to update** when your battles finish. Pro never installs an update just because you close it, and your profile and settings remain saved.
 
-macOS builds are currently unsigned, so they offer **Download update** for the correct Intel or Apple Silicon release. Windows portable ZIP and extracted Linux builds also use a download-and-install fallback. Source checkouts do not update themselves, and private builds never install public releases. Existing releases without the updater need one manual upgrade to a build containing it.
+macOS builds are currently unsigned, so they offer **Download update** for the correct Intel or Apple Silicon release. Windows portable ZIP and extracted Linux builds also use a download-and-install fallback. Source checkouts do not update themselves. Existing releases without the updater need one manual upgrade to a build containing it.
 
 **Add-on updates** separately checks the six browser add-ons and stable Showdex releases once a day while no battles are active.
 
