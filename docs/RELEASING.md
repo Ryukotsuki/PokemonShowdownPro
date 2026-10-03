@@ -58,6 +58,8 @@ The release tag must match `v` followed by the package version. For a later rele
 
 ## Signing
 
+macOS DMGs include `.metadata_never_index` before copying the app to reduce background indexing of the temporary build volume. The packaging wrapper retries the specific `Unable to detach device cleanly` / `Resource busy` failure up to three total attempts, with 5- and 10-second pauses. Persistent failures, code-signing errors, other build errors, and terminated processes still fail the workflow. Both Intel and Apple Silicon retain DMG and ZIP downloads.
+
 These workflows do not include Windows signing certificates or Apple Developer signing/notarization credentials. The resulting apps are unsigned; operating systems may require users to explicitly approve opening them. Signing and notarization can be added when the required credentials are available.
 
 ## App self-updates

@@ -48,6 +48,20 @@ mac:
   identity: null
   target: [dmg, zip]
   artifactName: PokemonShowdownPro-${version}-macos-${arch}.${ext}
+dmg:
+  contents:
+    # Copy the indexing exclusion before the app to reduce background volume activity.
+    - x: 0
+      y: 0
+      type: file
+      path: app/assets/dmg/.metadata_never_index
+    - x: 130
+      y: 220
+      type: file
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
 linux:
   icon: app/assets/icons/icon.png
   category: Game

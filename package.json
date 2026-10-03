@@ -38,7 +38,7 @@
     "test:navigation": "node scripts/start.cjs --smoke-test --theme-audit --navigation-only",
     "audit:hub": "node scripts/start.cjs --smoke-test --sidebar-only",
     "fetch:vendor": "node scripts/fetch-vendor.cjs",
-    "dist": "node scripts/prepare-release.cjs && electron-builder --publish never",
+    "dist": "node scripts/prepare-release.cjs && node scripts/build-release.cjs",
     "verify:package": "node scripts/verify-package.cjs"
   },
   "devDependencies": {
