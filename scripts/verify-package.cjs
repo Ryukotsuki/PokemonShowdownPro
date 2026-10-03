@@ -15,7 +15,9 @@ delete env.ELECTRON_RUN_AS_NODE;delete env.NODE_PATH;
   const node=path.join(appRoot,'build/update-runtime',process.platform==='win32'?'node.exe':'node');
   const check="import('@electron-internal/extract-zip').then(m=>{if(typeof m.extract!=='function')throw Error('Extractor missing');console.log('Bundled Node and native extractor passed',process.version)}).catch(e=>{console.error(e);process.exitCode=1})";
   await runProcess(node,['-e',check],{cwd:appRoot,env,timeout:30000,onOutput:text=>process.stdout.write(text)});
-  await runProcess(executable,['--verify-release',...(process.platform==='linux'?['--no-sandbox']:[])],{cwd:appRoot,env,timeout:15*60*1000,onOutput:text=>process.stdout.write(text)});
+  // The packaged entry point handles portable Linux startup itself. Do not
+  // hide a broken ordinary launch by adding --no-sandbox only in this audit.
+  await runProcess(executable,['--verify-release'],{cwd:appRoot,env,timeout:15*60*1000,onOutput:text=>process.stdout.write(text)});
 })().catch(error=>{
   console.error(error);process.exitCode=1;
   const diagnostics=path.join(root,'test-results','package-verification-'+process.platform+'-'+process.arch);

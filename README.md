@@ -34,6 +34,12 @@
 - **Both Showdown clients.** Opens the new official interface by default, with the classic client still available and your preferred theme and settings preserved.
 - **Automatic add-on updates.** Daily checks run between battles. Compatible updates apply on restart, with rollback if loading fails.
 
+## Linux desktop shortcut
+
+Make the downloaded AppImage executable and run it once, or launch `AppRun` from an extracted AppImage. The first successful launch creates a desktop shortcut and an application-menu entry using your current installation path. The icon is stored in your user data directory so it remains available after the AppImage unmounts. Extracted `.tar.gz` releases also support this.
+
+If your desktop asks you to **Allow Launching**, enable it for the new shortcut. Later launches preserve manually created shortcuts and do not recreate a desktop icon you have deleted.
+
 ## Built-in add-ons
 
 All six add-ons are included and enabled initially. Use **Battle Hub → Add-ons** to choose which ones you want.

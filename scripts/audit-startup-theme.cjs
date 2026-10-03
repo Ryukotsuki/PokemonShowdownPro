@@ -39,6 +39,13 @@ app.whenReady().then(async()=>{
       const navigation=wc.loadURL('https://play.pokemonshowdown.com/'+client).then(()=>{loaded=true;});
       navigation.catch(()=>{});
       await dom;
+      let frameTimer;
+      try {
+        assert.equal(await Promise.race([
+          wc.mainFrame.executeJavaScript('document.readyState !== "loading"'),
+          new Promise((_,reject)=>{frameTimer=setTimeout(()=>reject(new Error('Main-frame scripts waited for the slow resource')),2000);})
+        ]),true);
+      } finally {clearTimeout(frameTimer);}
       if(!wc.debugger.isAttached())wc.debugger.attach('1.3');
       const evaluate=async expression=>(await wc.debugger.sendCommand('Runtime.evaluate',{expression,returnByValue:true})).result.value;
       let state;

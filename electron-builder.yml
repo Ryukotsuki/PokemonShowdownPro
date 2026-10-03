@@ -2,6 +2,7 @@ appId: com.pokemonshowdownpro.desktop
 productName: Pokemon Showdown Pro
 asar: false
 npmRebuild: false
+afterPack: scripts/after-pack.cjs
 directories:
   output: dist
 files:
@@ -47,5 +48,11 @@ linux:
   icon: app/assets/icons/icon.png
   category: Game
   executableName: pokemon-showdown-pro
+  syncDesktopName: true
+  executableArgs: [--no-sandbox, --class=pokemon-showdown-pro]
+  desktop:
+    entry:
+      StartupWMClass: pokemon-showdown-pro
+      StartupNotify: 'true'
   target: [AppImage, tar.gz]
   artifactName: PokemonShowdownPro-${version}-linux-${arch}.${ext}

@@ -1,5 +1,6 @@
 {
   "name": "pokemon-showdown-pro",
+  "desktopName": "pokemon-showdown-pro.desktop",
   "version": "1.0.0",
   "private": true,
   "description": "Official Pokémon Showdown client with Showdex, Pro styling, and optional add-ons",

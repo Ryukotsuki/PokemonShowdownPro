@@ -1,4 +1,5 @@
 const { app, BrowserWindow, WebContentsView, ipcMain, protocol, session, net, shell, Menu, clipboard, nativeImage, screen } = require('electron');
+require('./linux-integration.cjs').configureLinuxRuntime(app);
 const path = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
@@ -260,54 +261,29 @@ async function assets(request) {
   } catch { return new Response('Not found', { status: 404 }); }
 }
 async function installClient() {
-  const wc = client.webContents;
-  const bridge = fs.readFileSync(path.join(__dirname, 'client-bridge.js'), 'utf8');
-  const deadline = Date.now() + 30000;
-  while (!wc.isDestroyed() && Date.now() < deadline) {
-    if (!wc.getURL().startsWith(CLIENT_URL)) return;
-    if (await wc.executeJavaScript(bridge)) {
-      if (!await wc.executeJavaScript(fs.readFileSync(path.join(__dirname, 'client-theme.js'), 'utf8'))) {
-        await new Promise(resolve => setTimeout(resolve, 250));
-        continue;
-      }
-      await wc.executeJavaScript(`window.__showdownPro.setAutoTimer(${preferences.autoStartTimer})`);
-      // Inside @scope the root must be addressed explicitly as :scope.
-      // An implicit descendant selector like `html.dark body` cannot match it.
-      const scopedCSS = fs.readFileSync(path.join(__dirname, 'client-theme.css'), 'utf8')
-        .replace(/\bhtml(?=[.,\s:#\[])/g, ':scope');
-      const themeCSS = '@scope (html.showdown-pro) {\n' + scopedCSS + '\n}';
-      await wc.insertCSS(themeCSS, { cssOrigin: 'user' });
-      await wc.executeJavaScript(`(() => {
-        let style = document.getElementById('showdown-pro-theme');
-        if (!style) {
-          style = document.createElement('style');
-          style.id = 'showdown-pro-theme';
-          document.head.appendChild(style);
-        }
-        style.textContent = ${JSON.stringify(themeCSS)};
-        return !!style.sheet;
-      })()`);
-      clientStatus = 'Official Showdown client connected'; publish();
+  const version = navigationVersion;
+  const result = await require('./client-startup.cjs').installClientScripts({
+    contents:client.webContents, clientURL:CLIENT_URL,
+    bridge:fs.readFileSync(path.join(__dirname,'client-bridge.js'),'utf8'),
+    themeScript:fs.readFileSync(path.join(__dirname,'client-theme.js'),'utf8'),
+    themeCSS:require('./client-theme-css.cjs'), autoTimer:preferences.autoStartTimer,
+    isCurrent:()=>version===navigationVersion && !closing,
+    onClientReady:()=>{
+      clientStatus='Official Showdown client connected';publish();
       if(preferences.sidebarTab==='history')setTimeout(()=>void refreshReplayOutcomes(),2000).unref();
-      if(!appliedShowdex){showdexStatus='Disabled';addonUpdates.confirm('showdex');publish();return;}
-      const bundle = path.join(addonUpdates.installed('showdex',path.join(root,'build/showdex')),'main.js');
-      try {
-        if (!fs.existsSync(bundle)) throw new Error('Build missing — run npm run build:showdex');
-        if (!await wc.executeJavaScript('!!window.__SHOWDEX_INIT')) await wc.executeJavaScript(fs.readFileSync(bundle, 'utf8'));
-        if(!await wc.executeJavaScript('!!window.__SHOWDEX_INIT'))throw new Error('Showdex failed to initialize');
-        showdexStatus='Showdex loaded';addonUpdates.confirm('showdex');
-      } catch(error) {
-        if(addonUpdates.saved.current.showdex&&!rolledBackUpdates.has('showdex')){rolledBackUpdates.add('showdex');addonUpdates.rollback('showdex','The calculator could not initialize.');wc.reload();return;}
-        showdexStatus=error.message;
-      }
-      publish(); return;
-    }
-    await new Promise(resolve => setTimeout(resolve, 250));
-  }
-  throw new Error('Showdown client did not become ready. Reload to retry.');
+    },
+    getBundle:()=>appliedShowdex?path.join(addonUpdates.installed('showdex',path.join(root,'build/showdex')),'main.js'):null,
+  });
+  if(!result)return;
+  if(result.showdexError) {
+    if(addonUpdates.saved.current.showdex&&!rolledBackUpdates.has('showdex')){rolledBackUpdates.add('showdex');addonUpdates.rollback('showdex','The calculator could not initialize.');client.webContents.reload();return;}
+    showdexStatus=result.showdexError.message;
+  } else {showdexStatus=result.showdex?'Showdex loaded':'Disabled';addonUpdates.confirm('showdex');}
+  publish();
 }
 async function createWindow() {
   Menu.setApplicationMenu(null);
+  if (!smoke && !verifyRelease) void require('./linux-integration.cjs').installLinuxShortcuts({app,description:require('../package.json').description}).catch(error=>console.error('Linux shortcuts:',error.message));
   preferencesFile = path.join(app.getPath('userData'), 'preferences.json');
   const previousFile = path.join(app.getPath('userData'), 'assistant-preferences.json');
   preferences = loadPreferences(fs.existsSync(preferencesFile) ? preferencesFile : previousFile);

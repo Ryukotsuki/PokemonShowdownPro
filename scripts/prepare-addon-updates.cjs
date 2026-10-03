@@ -13,7 +13,7 @@ const say=message=>console.log(JSON.stringify({message}));
 const installed=(component,fallback)=>request.current[component]?contained(request.directory,request.current[component].directory):fallback;
 const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
 const electron=process.env.SHOWDOWN_PRO_ELECTRON_EXECUTABLE||(process.versions.electron?process.execPath:require('electron'));
-const auditArgs=(component,target)=>[root,component==='addons'?'--audit-addon-update':'--audit-showdex-update',...(component==='addons'?['--update-stage',target]:[target]),...(process.env.SHOWDOWN_PRO_UPDATE_NO_SANDBOX==='1'?['--no-sandbox']:[])];
+const auditArgs=(component,target)=>[root,component==='addons'?'--audit-addon-update':'--audit-showdex-update',...(component==='addons'?['--update-stage',target]:[target]),...(process.platform==='linux'||process.env.SHOWDOWN_PRO_UPDATE_NO_SANDBOX==='1'?['--no-sandbox']:[])];
 const electronEnv={...process.env};delete electronEnv.ELECTRON_RUN_AS_NODE;
 async function audit(component) {
   const log=text=>fs.appendFileSync(path.join(stage,component+'-validation.log'),text);

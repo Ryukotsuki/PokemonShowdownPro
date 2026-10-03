@@ -38,6 +38,10 @@ Audit sessions block the site's advertising bootstrap and its trackers so unrela
 
 Each platform also checks that Pro styling is available while a page resource is deliberately held open, including both clients, the new client's redirected root URL, and saved Light, Dark, and System selections. Packaged checks verify that a fresh profile opens the new client with Pro selected for Showdown, Showdex, and the Battle Hub. All checks run muted.
 
+Linux portable launchers include `--no-sandbox` and a consistent window class. The Linux packaging hook keeps the native binary as `pokemon-showdown-pro.bin` and creates an executable `pokemon-showdown-pro` shell launcher that supplies these flags before Chromium starts. The packaged entry point also applies the flags before creating windows. Package verification deliberately launches without adding the sandbox flag itself, so a broken normal Linux launch fails the build. First-run desktop integration uses each user's XDG paths and the original AppImage, extracted `AppRun`, or portable launcher; it never stores a temporary AppImage mount path.
+
+The Showdex startup audit holds a real client image request open while initializing the production bridge, theme, and shipped calculator through the ready main frame. It verifies that Showdex Pro renders before the page finishes loading.
+
 ## Publish version 1.0.0
 
 1. Confirm `package.json` and `package-lock.json` both contain version `1.0.0`.
