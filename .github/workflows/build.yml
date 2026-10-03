@@ -75,7 +75,7 @@ jobs:
         run: node node_modules/electron/cli.js scripts/audit-startup-theme.cjs
       - name: Verify early theme startup on Linux
         if: runner.os == 'Linux'
-        run: xvfb-run -a node node_modules/electron/cli.js scripts/audit-startup-theme.cjs
+        run: xvfb-run -a node node_modules/electron/cli.js scripts/audit-startup-theme.cjs --no-sandbox
       - name: Download browser add-ons
         run: npm run download:addons
       - name: Package apps
