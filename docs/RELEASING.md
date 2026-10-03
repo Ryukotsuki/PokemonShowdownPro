@@ -40,6 +40,8 @@ Each platform also checks that Pro styling is available while a page resource is
 
 Linux portable launchers include `--no-sandbox` and a consistent window class. The Linux packaging hook keeps the native binary as `pokemon-showdown-pro.bin` and creates an executable `pokemon-showdown-pro` shell launcher that supplies these flags before Chromium starts. The packaged entry point also applies the flags before creating windows. Package verification deliberately launches without adding the sandbox flag itself, so a broken normal Linux launch fails the build. First-run desktop integration uses each user's XDG paths and the original AppImage, extracted `AppRun`, or portable launcher; it never stores a temporary AppImage mount path.
 
+Linux verification also extracts the shipped tar archive and runs the shipped AppImage in isolated homes. It checks real desktop and menu entries, PNG installation, desktop-file validity, migration of older generated launchers, deletion behavior, and explicit repair with `--install-shortcuts`. AppImage checks use the runtime's extraction fallback so FUSE is not required on CI. A new installation path restores a missing desktop shortcut; repeated launches at the same path respect deletion. Linux verification requires `desktop-file-validate` (the `desktop-file-utils` package).
+
 The Showdex startup audit holds a real client image request open while initializing the production bridge, theme, and shipped calculator through the ready main frame. It verifies that Showdex Pro renders before the page finishes loading.
 
 ## Publish version 1.0.0

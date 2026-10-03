@@ -91,7 +91,10 @@ jobs:
         run: npm run verify:package
       - name: Verify packaged app on Linux
         if: runner.os == 'Linux'
-        run: xvfb-run -a npm run verify:package
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y desktop-file-utils
+          xvfb-run -a npm run verify:package
       - name: Upload package verification diagnostics
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

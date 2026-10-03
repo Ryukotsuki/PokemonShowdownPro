@@ -38,7 +38,17 @@
 
 Make the downloaded AppImage executable and run it once, or launch `AppRun` from an extracted AppImage. The first successful launch creates a desktop shortcut and an application-menu entry using your current installation path. The icon is stored in your user data directory so it remains available after the AppImage unmounts. Extracted `.tar.gz` releases also support this.
 
-If your desktop asks you to **Allow Launching**, enable it for the new shortcut. Later launches preserve manually created shortcuts and do not recreate a desktop icon you have deleted.
+If your desktop asks you to **Allow Launching**, enable it for the new shortcut. Later launches preserve manually edited shortcuts and respect a deleted desktop icon at the same installation path. Moving or replacing the installation at a new path creates the shortcut again and refreshes older generated menu entries.
+
+To restore a missing desktop icon without opening the app, run your release with `--install-shortcuts`:
+
+```sh
+./PokemonShowdownPro-1.0.0-linux-x86_64.AppImage --install-shortcuts
+# Or, inside an extracted tar release:
+./pokemon-showdown-pro --install-shortcuts
+```
+
+This also refreshes generated application-menu launchers and their persistent icon. Manually edited launchers are preserved. Desktop environments with desktop icons disabled still provide the application-menu entry.
 
 ## Built-in add-ons
 

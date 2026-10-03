@@ -5,6 +5,7 @@ const {promisify} = require('node:util');
 const APP_CLASS = 'pokemon-showdown-pro';
 const FILE_NAME = APP_CLASS + '.desktop';
 const MANAGED = 'X-Showdown-Pro-Managed=true';
+const DESCRIPTION = 'Official Pokémon Showdown client with Showdex, Pro styling, and optional add-ons';
 
 function configureLinuxRuntime(app, platform = process.platform) {
   if (platform !== 'linux' || !app.isPackaged) return;
@@ -40,10 +41,25 @@ async function stableExecutable(execPath, env) {
   }
   throw new Error('No persistent Linux executable was found for the shortcut');
 }
+function legacyGeneratedEntry(text) {
+  // Older releases and AppImage installers used this exact template without
+  // our ownership marker. Require the complete template to preserve edits.
+  const lines = text.split('\n');
+  const exec = lines.find(line => line.startsWith('Exec='));
+  const icon = lines.find(line => line.startsWith('Icon='));
+  const version = lines.find(line => line.startsWith('X-AppImage-Version='));
+  if (!/^Exec="\/[^\n]+\/(?:AppRun|pokemon-showdown-pro|[^/]+\.AppImage)" --no-sandbox --class=pokemon-showdown-pro %U$/.test(exec || '') ||
+      !icon?.startsWith('Icon=/') || !version) return false;
+  const template = desktopEntry('/app/pokemon-showdown-pro', '/icon.png', '1.0.0', DESCRIPTION)
+    .replace(MANAGED + '\n', '').split('\n').map(line =>
+      line.startsWith('Exec=') ? exec : line.startsWith('Icon=') ? icon :
+        line.startsWith('X-AppImage-Version=') ? version : line).join('\n');
+  return text === template;
+}
 async function writeManaged(file, text, mode) {
   let current;
   try {current = await fs.readFile(file, 'utf8');} catch (error) {if (error.code !== 'ENOENT') throw error;}
-  if (current !== undefined && !current.split(/\r?\n/).includes(MANAGED)) return false;
+  if (current !== undefined && !current.split(/\r?\n/).includes(MANAGED) && !legacyGeneratedEntry(current)) return false;
   await fs.mkdir(path.dirname(file), {recursive:true});
   if (current !== text) await fs.writeFile(file, text, {mode});
   await fs.chmod(file, mode);
@@ -51,7 +67,7 @@ async function writeManaged(file, text, mode) {
 }
 const trustDesktop = file => promisify(execFile)('gio', ['set',file,'metadata::trusted','true'], {timeout:3000,windowsHide:true});
 async function installLinuxShortcuts({app,platform=process.platform,env=process.env,execPath=process.execPath,
-  icon=path.join(__dirname,'assets/icons/icon.png'),description,trust=trustDesktop}) {
+  icon=path.join(__dirname,'assets/icons/icon.png'),description,trust=trustDesktop,forceDesktop=false}) {
   if (platform !== 'linux' || !app.isPackaged) return null;
   const home = app.getPath('home');
   const desktop = app.getPath('desktop'); // Chromium honors localized XDG user directories.
@@ -63,24 +79,26 @@ async function installLinuxShortcuts({app,platform=process.platform,env=process.
   const installedIcon = path.join(data,'icons/hicolor/256x256/apps',APP_CLASS+'.png');
   await fs.mkdir(path.dirname(installedIcon),{recursive:true});
   await fs.copyFile(icon,installedIcon);
-  const text = desktopEntry(executable,installedIcon,app.getVersion(),description || 'Official Pokémon Showdown client with Showdex, Pro styling, and optional add-ons');
+  const text = desktopEntry(executable,installedIcon,app.getVersion(),description || DESCRIPTION);
   const menuFile = path.join(data,'applications',FILE_NAME);
   await writeManaged(menuFile,text,0o644);
   let desktopFile = null;
+  let desktopHandled = saved.desktopHandled === true;
   if (desktop && path.resolve(desktop) !== path.resolve(home)) {
     desktopFile = path.join(desktop,FILE_NAME);
     let exists = false;
     try {exists = (await fs.stat(desktopFile)).isFile();} catch {}
-    // Keep existing shortcuts current after an app move/update; respect a user's
-    // deletion instead of creating the desktop icon again on every launch.
-    if (!saved.desktopHandled || exists) {
+    // A new installation path gets a shortcut. Repeated launches at the same
+    // path respect deletion unless the user explicitly requests repair.
+    if (forceDesktop || !saved.desktopHandled || saved.executable !== executable || exists) {
       if (await writeManaged(desktopFile,text,0o755)) {
         try {await trust(desktopFile);} catch { /* Desktop environments without GIO still get an executable entry. */ }
       }
+      desktopHandled = true;
     }
   }
   await fs.mkdir(path.dirname(metadata),{recursive:true});
-  await fs.writeFile(metadata,JSON.stringify({desktopHandled:true,executable},null,2));
+  await fs.writeFile(metadata,JSON.stringify({desktopHandled,executable},null,2));
   return {menuFile,desktopFile,executable,icon:installedIcon};
 }
 module.exports = {configureLinuxRuntime,installLinuxShortcuts,desktopEntry,execQuote,stableExecutable};

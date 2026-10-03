@@ -89,6 +89,40 @@ test('existing manually edited desktop entries are preserved and unsupported tru
   const created=await installLinuxShortcuts({...second.options,trust:async()=>{throw Error('GIO unsupported');}});
   assert.ok((await fs.readFile(created.desktopFile,'utf8')).includes('X-Showdown-Pro-Managed=true'));
 });
+test('a replacement installation restores a missing icon while explicit repair also works at the same path',async t=>{
+  const f=await fixture(t),result=await installLinuxShortcuts(f.options);
+  await fs.unlink(result.desktopFile);
+  await installLinuxShortcuts(f.options);
+  await assert.rejects(fs.stat(result.desktopFile),{code:'ENOENT'});
+  await installLinuxShortcuts({...f.options,forceDesktop:true});
+  assert.ok((await fs.readFile(result.desktopFile,'utf8')).includes(execQuote(f.executable)));
+  await fs.unlink(result.desktopFile);
+  const replacement=path.join(f.home,'replacement','pokemon-showdown-pro');
+  await fs.mkdir(path.dirname(replacement));await fs.writeFile(replacement,'replacement');
+  await installLinuxShortcuts({...f.options,execPath:replacement});
+  assert.ok((await fs.readFile(result.desktopFile,'utf8')).includes(execQuote(replacement)));
+});
+test('older generated installer entries migrate, while manual edits survive explicit repair',async t=>{
+  const f=await fixture(t),menu=path.join(f.home,'.local/share/applications/pokemon-showdown-pro.desktop');
+  const legacy=desktopEntry('/old/squashfs-root/AppRun','/old/icon.png','1.0.0',
+    'Official Pokémon Showdown client with Showdex, Pro styling, and optional add-ons').replace('X-Showdown-Pro-Managed=true\n','');
+  await fs.mkdir(path.dirname(menu),{recursive:true});await fs.writeFile(menu,legacy);
+  await installLinuxShortcuts(f.options);
+  assert.ok((await fs.readFile(menu,'utf8')).includes(execQuote(f.executable)));
+  assert.match(await fs.readFile(menu,'utf8'),/X-Showdown-Pro-Managed=true/);
+  const manual=legacy.replace('Comment=Official Pokémon Showdown client with Showdex, Pro styling, and optional add-ons','Comment=My custom launcher');
+  await fs.writeFile(menu,manual);
+  const desktop=path.join(f.desktop,'pokemon-showdown-pro.desktop');await fs.writeFile(desktop,manual);
+  await installLinuxShortcuts({...f.options,forceDesktop:true});
+  assert.equal(await fs.readFile(menu,'utf8'),manual);assert.equal(await fs.readFile(desktop,'utf8'),manual);
+});
+test('a disabled desktop does not mark an icon as created before a desktop becomes available',async t=>{
+  const f=await fixture(t),app={...f.app,getPath:key=>key==='desktop'?f.home:f.app.getPath(key)};
+  await installLinuxShortcuts({...f.options,app});
+  assert.equal(JSON.parse(await fs.readFile(path.join(f.userData,'linux-shortcuts.json'),'utf8')).desktopHandled,false);
+  const result=await installLinuxShortcuts(f.options);
+  assert.ok((await fs.readFile(result.desktopFile,'utf8')).includes(execQuote(f.executable)));
+});
 test('disabled desktops do not put shortcuts in the home directory and other OS/development launches do not write files',async t=>{
   const f=await fixture(t);
   const app={...f.app,getPath:key=>key==='desktop'?f.home:f.app.getPath(key)};

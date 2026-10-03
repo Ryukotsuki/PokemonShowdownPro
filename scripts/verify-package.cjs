@@ -12,6 +12,7 @@ const env={...process.env,SHOWDOWN_PRO_VERIFY_PROFILE:profile,SHOWDOWN_PRO_UPDAT
 delete env.ELECTRON_RUN_AS_NODE;delete env.NODE_PATH;
 (async()=>{
   if(!fs.existsSync(executable))throw new Error('Packaged executable missing: '+executable);
+  await require('./verify-linux-shortcuts.cjs')(dist);
   const node=path.join(appRoot,'build/update-runtime',process.platform==='win32'?'node.exe':'node');
   const check="import('@electron-internal/extract-zip').then(m=>{if(typeof m.extract!=='function')throw Error('Extractor missing');console.log('Bundled Node and native extractor passed',process.version)}).catch(e=>{console.error(e);process.exitCode=1})";
   await runProcess(node,['-e',check],{cwd:appRoot,env,timeout:30000,onOutput:text=>process.stdout.write(text)});
