@@ -19,14 +19,82 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  resolve:
+    name: Validate release tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      commit: ${{ steps.release.outputs.commit }}
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.16.0'
+      - name: Resolve release source
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          async function resolveRelease() {
+            const tag = process.env.RELEASE_TAG;
+            if (!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(tag || '')) {
+              throw new Error('Enter an existing release tag such as v1.0.0, including the v prefix.');
+            }
+            const base = `${process.env.GITHUB_API_URL}/repos/${process.env.GITHUB_REPOSITORY}`;
+            async function api(route, missing) {
+              let response;
+              try {
+                response = await fetch(base + route, {
+                  headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${process.env.GH_TOKEN}`, 'User-Agent': 'PokemonShowdownPro-release-workflow' },
+                  signal: AbortSignal.timeout(20000)
+                });
+              } catch {
+                throw new Error('Could not connect to GitHub to validate the release. Start a new workflow run after connectivity is restored.');
+              }
+              if (response.status === 401 || response.status === 403) {
+                throw new Error('GitHub denied repository access. The workflow GITHUB_TOKEN needs contents: read permission.');
+              }
+              if (response.status === 404) throw new Error(missing);
+              if (!response.ok) throw new Error(`GitHub returned HTTP ${response.status} while validating the release. Try a new workflow run.`);
+              return response.json();
+            }
+            await api('', 'This workflow cannot access its repository. Check repository access and the GITHUB_TOKEN contents: read permission.');
+            const ref = await api(`/git/ref/tags/${encodeURIComponent(tag)}`,
+              `Release tag ${tag} does not exist. Create and push that tag before running Release apps. Deleting a release does not recreate its tag.`);
+            let object = ref.object;
+            // Annotated tags point to tag objects; peel them to the source commit.
+            for (let depth = 0; object?.type === 'tag' && depth < 10; depth++) {
+              if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(object.sha || '')) throw new Error('GitHub returned an invalid tag object.');
+              object = (await api(`/git/tags/${object.sha}`, 'The annotated release tag cannot be resolved.')).object;
+            }
+            if (object?.type !== 'commit' || !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(object.sha || '')) {
+              throw new Error('The release tag must point to a source commit.');
+            }
+            const file = await api(`/contents/package.json?ref=${object.sha}`, 'The release commit is missing package.json.');
+            if (file.encoding !== 'base64' || typeof file.content !== 'string') throw new Error('Could not read package.json from the release commit.');
+            const version = JSON.parse(Buffer.from(file.content, 'base64').toString('utf8')).version;
+            if (typeof version !== 'string' || tag !== `v${version}`) throw new Error(`Release tag ${tag} must match the package version in its commit. Update package.json and package-lock.json before creating the release tag.`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `commit=${object.sha}\n`);
+            console.log(`Building ${tag} from commit ${object.sha}. All platforms will use this exact source.`);
+          }
+          resolveRelease().catch(error => {
+            console.error('::error::' + error.message.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A'));
+            process.exitCode = 1;
+          });
+          NODE
   build:
+    needs: resolve
     uses: ./.github/workflows/build.yml
     with:
-      ref: ${{ github.event.release.tag_name || inputs.tag }}
+      ref: ${{ needs.resolve.outputs.commit }}
       release_tag: ${{ github.event.release.tag_name || inputs.tag }}
   upload:
     name: Attach apps to GitHub release
-    needs: build
+    needs: [resolve, build]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -34,7 +102,7 @@ jobs:
       - name: Check out release scripts
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          ref: ${{ needs.resolve.outputs.commit }}
           persist-credentials: false
       - name: Download all platform builds
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
