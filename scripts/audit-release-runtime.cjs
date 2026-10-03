@@ -2,6 +2,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 module.exports=async({app,window,client,root,addonUpdates,browserAddons,state})=>{
   assert.equal(app.isPackaged,true,'This audit must run the packaged application');
+  const updateConfig=require('js-yaml').load(fs.readFileSync(path.join(process.resourcesPath,'app-update.yml'),'utf8'));
+  assert.equal(updateConfig.provider,'github');
+  assert.equal(updateConfig.owner,'Ryukotsuki');
+  assert.equal(updateConfig.repo,'PokemonShowdownPro');
+  assert.ok(require.resolve('electron-updater').startsWith(root+path.sep),'The updater must ship inside the app');
+  assert.equal(state().appUpdates.supported,false,'Package audits must never download or install live app updates');
   for(let i=0;i<600&&state().showdexStatus!=='Showdex loaded';i++)await pause(100);
   assert.equal(state().showdexStatus,'Showdex loaded',JSON.stringify(state()));
   for(let i=0;i<100;i++) {

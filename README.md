@@ -33,6 +33,7 @@
 - **PokéPaste tools.** Preview shared teams, import them locally, and export available open team sheets.
 - **Both Showdown clients.** Opens the new official interface by default, with the classic client still available and your preferred theme and settings preserved.
 - **Automatic add-on updates.** Daily checks run between battles. Compatible updates apply on restart, with rollback if loading fails.
+- **App release updates.** Pro checks GitHub for new releases. Windows installations and Linux AppImages download updates with a restart button; portable archives and macOS offer the matching download.
 
 ## Linux desktop shortcut
 
@@ -123,7 +124,11 @@ Showdex's theme is independent of the main client. Add-on windows follow the app
 
 ## Updates
 
-Automatic updates are on by default under **Battle Hub → Add-ons → Updates**. The app checks the six browser add-ons and stable Showdex releases once a day while no battles are active.
+**Battle Hub → Add-ons → App updates** checks stable GitHub releases once a day between battles. Installed Windows builds and Linux AppImages download new versions automatically and verify their SHA-512 checksums. Choose **Restart to update** when your battles finish. Pro never installs an update just because you close it, and your profile and settings remain saved.
+
+macOS builds are currently unsigned, so they offer **Download update** for the correct Intel or Apple Silicon release. Windows portable ZIP and extracted Linux builds also use a download-and-install fallback. Source checkouts do not update themselves, and private builds never install public releases. Existing releases without the updater need one manual upgrade to a build containing it.
+
+**Add-on updates** separately checks the six browser add-ons and stable Showdex releases once a day while no battles are active.
 
 New packages receive the Pro styling and compatibility patches, then run checks against both Showdown clients in isolated, muted profiles. Verified updates apply when you restart the app. Failed checks keep the installed versions; failed startup restores the previous version.
 

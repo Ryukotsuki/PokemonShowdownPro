@@ -54,6 +54,14 @@ function render(state) {
   $('save-winning-replays').checked = !!state.settings?.saveWinningReplays;
   $('save-losing-replays').checked = !!state.settings?.saveLosingReplays;
   $('showdex-enabled').checked=state.settings?.showdexEnabled!==false;
+  $('auto-update-app').checked=state.settings?.autoUpdateApp!==false;
+  const appUpdate=state.appUpdates;
+  $('auto-update-app').disabled=!appUpdate?.supported;
+  $('app-update-status').textContent=appUpdate?.message||'App updates have not been checked yet.';
+  $('check-app-updates').disabled=!appUpdate?.supported||!!appUpdate?.busy||appUpdate?.status==='ready';
+  $('app-update-action').hidden=!['ready','available'].includes(appUpdate?.status);
+  $('app-update-action').textContent=appUpdate?.status==='ready'?'Restart to update':'Download update';
+  $('app-update-action').disabled=appUpdate?.status==='ready'?!appUpdate.canRestart:!appUpdate?.canDownload;
   $('auto-update-addons').checked=state.settings?.autoUpdateAddons!==false;
   $('addon-update-status').textContent=state.addonUpdates?.message||'Updates have not been checked yet.';
   $('check-addon-updates').disabled=!!state.addonUpdates?.busy;
@@ -166,4 +174,7 @@ for (const [id, key] of [['auto-start-timer', 'autoStartTimer'], ['save-winning-
 $('reload').onclick = () => hubAction(()=>window.pro.reload());
 $('auto-update-addons').onchange=()=>hubAction(async()=>render(await window.pro.setSetting('autoUpdateAddons',$('auto-update-addons').checked)));
 $('check-addon-updates').onclick=()=>hubAction(async()=>render(await window.pro.checkUpdates()));
+$('auto-update-app').onchange=()=>hubAction(async()=>{try{render(await window.pro.setSetting('autoUpdateApp',$('auto-update-app').checked));}catch(error){render(await window.pro.getState());throw error;}});
+$('check-app-updates').onclick=()=>hubAction(async()=>render(await window.pro.checkAppUpdates()));
+$('app-update-action').onclick=()=>hubAction(async()=>render(await window.pro.appUpdateAction()));
 window.pro.onState(render); window.pro.getState().then(render);

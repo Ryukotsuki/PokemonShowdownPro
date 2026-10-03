@@ -9,6 +9,7 @@ const { defaults, replayUrl, validMessages, sidebarTabs, shouldUploadReplay, loa
 const { addons: addonCatalog } = require('./addon-catalog.cjs');
 const { BrowserAddons } = require('./browser-addons.cjs');
 const { AddonUpdates } = require('./addon-updates.cjs');
+const { AppUpdates } = require('./app-updates.cjs');
 const { prepareUpdates } = require('./update-process.cjs');
 const { BattleMessages } = require('./battle-messages.cjs');
 const { createHubTooltip } = require('./hub-tooltip.cjs');
@@ -40,7 +41,7 @@ if (verifyRelease) app.setPath('userData', process.env.SHOWDOWN_PRO_VERIFY_PROFI
 protocol.registerSchemesAsPrivileged([{ scheme: 'showdown-pro', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 let window, client, hubTooltip, closing = false;
 let browserAddons, appliedShowdex = true, reloadJob = null;
-let addonUpdates, updateTimer;
+let addonUpdates, updateTimer, appUpdates, appUpdateTimer;
 const rolledBackUpdates=new Set();
 const updatesIdle=()=>!closing&&![...battles.rooms.values()].some(room=>!room.ended);
 function checkAutoUpdates() {if(closing||smoke||!preferences.autoUpdateAddons&&!addonUpdates?.manualDeferred)return;if(!updatesIdle()){addonUpdates?.cancel();return;}void addonUpdates?.check(addonUpdates.manualDeferred).catch(error=>console.error('Update check:',error.message));}
@@ -83,7 +84,7 @@ async function refreshReplayOutcomes() {
   await replayOutcomeJob;
 }
 function state() {
-  return { appVersion, theme, showdexStatus, clientStatus, postMatchStatus, messageStatus, recentReplays:preferences.recentReplays, replayOutcomePending:[...replayOutcomePending], ui:{collapsed:preferences.sidebarCollapsed,tab:preferences.sidebarTab,fullscreen:!!window?.isFullScreen()}, addonUpdates:addonUpdates?.snapshot(), addons:browserAddons?.snapshot(preferences.addons)||[], reloadPending:preferences.showdexEnabled!==appliedShowdex || !!browserAddons?.pending(preferences.addons), statisticsError, statistics: { allTime: lifetimeRecord.allTime, session: sessionRecord }, settings:{...preferences}, rooms: [...battles.rooms.values()].reverse().filter(room => !room.ended).map(room => ({
+  return { appVersion, theme, showdexStatus, clientStatus, postMatchStatus, messageStatus, recentReplays:preferences.recentReplays, replayOutcomePending:[...replayOutcomePending], ui:{collapsed:preferences.sidebarCollapsed,tab:preferences.sidebarTab,fullscreen:!!window?.isFullScreen()}, appUpdates:appUpdates?.snapshot(), addonUpdates:addonUpdates?.snapshot(), addons:browserAddons?.snapshot(preferences.addons)||[], reloadPending:preferences.showdexEnabled!==appliedShowdex || !!browserAddons?.pending(preferences.addons), statisticsError, statistics: { allTime: lifetimeRecord.allTime, session: sessionRecord }, settings:{...preferences}, rooms: [...battles.rooms.values()].reverse().filter(room => !room.ended).map(room => ({
     id: room.id, title: room.title || room.id, turn: room.turn, status: room.status,
   })) };
 }
@@ -118,10 +119,11 @@ function setSetting(key, value) {
     if(key==='sidebarTab' && value==='history')void refreshReplayOutcomes();
     publish();return state();
   }
-  if (!['autoStartTimer', 'saveWinningReplays', 'saveLosingReplays', 'autoUpdateAddons'].includes(key) || typeof value !== 'boolean') throw new Error('Invalid setting.');
+  if (!['autoStartTimer', 'saveWinningReplays', 'saveLosingReplays', 'autoUpdateAddons', 'autoUpdateApp'].includes(key) || typeof value !== 'boolean') throw new Error('Invalid setting.');
   const previous = preferences[key];
   preferences[key] = value;
   try { savePreferences(preferencesFile, preferences); } catch (error) { preferences[key] = previous; throw error; }
+  if(key==='autoUpdateApp' && value)void appUpdates?.check();
   if(key==='autoUpdateAddons'){if(value)checkAutoUpdates();else addonUpdates?.cancel();}
   if (key === 'autoStartTimer' && client && !client.webContents.isDestroyed()) {
     void client.webContents.executeJavaScript(`window.__showdownPro?.setAutoTimer(${value})`).catch(() => {});
@@ -162,6 +164,8 @@ app.on('web-contents-created',(_event,contents)=>require('./window-shortcuts.cjs
   quit:()=>app.quit(),
 }));
 ipcMain.handle('panel:fullscreen',event=>trustedPanel(event)?toggleFullscreen():null);
+ipcMain.handle('panel:check-app-updates', async event => {if(trustedPanel(event)){await appUpdates?.check(true);return state();}});
+ipcMain.handle('panel:app-update-action', async event => {if(trustedPanel(event)){await appUpdates?.action();return state();}});
 ipcMain.handle('panel:state', event => trustedPanel(event) ? state() : null);
 ipcMain.handle('panel:check-updates', async event => {if(trustedPanel(event)){await addonUpdates?.check(true);return state();}});
 ipcMain.handle('panel:setting', (event, key, value) => { if (trustedPanel(event)) return setSetting(key, value); });
@@ -291,6 +295,7 @@ async function createWindow() {
   for (const obsolete of [previousFile, path.join(app.getPath('userData'), 'active-battles.json')]) fs.rmSync(obsolete, { force: true });
   if(smoke) {preferences.showdexEnabled=true;preferences.addons=Object.fromEntries(addonCatalog.map(addon=>[addon.key,false]));}
   appliedShowdex=preferences.showdexEnabled;
+  appUpdates=new AppUpdates({app,distribution:require('./update-distribution.cjs'),disabled:smoke || verifyRelease,enabled:()=>preferences.autoUpdateApp,canInstall:updatesIdle,openExternal:url=>shell.openExternal(url),onChange:publish});
   const updateDirectory=smoke?path.join(root,'test-results/smoke-updates'):app.isPackaged?path.join(app.getPath('userData'),'addon-updates'):path.join(root,'build/addon-updates');
   addonUpdates=new AddonUpdates({directory:updateDirectory,prepare:smoke?async()=>({}):prepareUpdates(root,updateDirectory,{verifyBundled:verifyRelease}),canCheck:updatesIdle,onChange:publish});
   if(!smoke)addonUpdates.activatePending();
@@ -362,7 +367,7 @@ async function createWindow() {
     try {await require('../scripts/audit-release-runtime.cjs')({app,window,client,root,addonUpdates,browserAddons,state});app.exit(0);}
     catch(error){console.error(error);app.exit(1);}return;
   }
-  if(!smoke){updateTimer=setInterval(checkAutoUpdates,60000);updateTimer.unref();setTimeout(checkAutoUpdates,10000).unref();}
+  if(!smoke){appUpdateTimer=setInterval(()=>void appUpdates?.check(),60000);appUpdateTimer.unref();setTimeout(()=>void appUpdates?.check(),10000).unref();updateTimer=setInterval(checkAutoUpdates,60000);updateTimer.unref();setTimeout(checkAutoUpdates,10000).unref();}
   if (smoke) setTimeout(async () => { try {
     const assert = require('node:assert/strict');
     const waitFor = async predicate => {
@@ -446,6 +451,10 @@ async function createWindow() {
     } catch (error) { console.error(error); app.exit(1); }
   }, 18000);
 }
-app.whenReady().then(createWindow).catch(error => { console.error(error); app.exit(1); });
-app.on('before-quit', () => { clearInterval(updateTimer);addonUpdates?.stop(); closing = true; navigationVersion++; });
+// A second installed instance must not install an update while the first is battling.
+const primaryInstance = !app.isPackaged || smoke || verifyRelease || app.requestSingleInstanceLock();
+if (primaryInstance) app.whenReady().then(createWindow).catch(error => { console.error(error); app.exit(1); });
+else app.quit();
+app.on('second-instance', () => { if (window) { if (window.isMinimized()) window.restore(); window.show(); window.focus(); } });
+app.on('before-quit', () => { clearInterval(updateTimer);clearInterval(appUpdateTimer);appUpdates?.stop();addonUpdates?.stop(); closing = true; navigationVersion++; });
 app.on('window-all-closed', () => app.quit());

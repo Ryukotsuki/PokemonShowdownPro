@@ -84,8 +84,16 @@ jobs:
         run: xvfb-run -a node node_modules/electron/cli.js scripts/audit-showdex-startup.cjs --no-sandbox
       - name: Download browser add-ons
         run: npm run download:addons
+      - name: Verify app updater downloads
+        if: runner.os != 'Linux'
+        run: node node_modules/electron/cli.js scripts/audit-app-updates.cjs
+      - name: Verify app updater downloads on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node node_modules/electron/cli.js scripts/audit-app-updates.cjs --no-sandbox
       - name: Package apps
         run: npm run dist -- --${{ matrix.arch }}
+      - name: Prepare app update metadata
+        run: node scripts/prepare-update-metadata.cjs
       - name: Verify packaged app
         if: runner.os != 'Linux'
         run: npm run verify:package
@@ -116,6 +124,9 @@ jobs:
             dist/*.AppImage
             dist/*.tar.gz
             dist/*.sha256
+            dist/*.blockmap
+            dist/latest*.yml
+            dist/update-mac-*.json
           if-no-files-found: error
           retention-days: 14
           compression-level: 0

@@ -60,6 +60,16 @@ The release tag must match `v` followed by the package version. For a later rele
 
 These workflows do not include Windows signing certificates or Apple Developer signing/notarization credentials. The resulting apps are unsigned; operating systems may require users to explicitly approve opening them. Signing and notarization can be added when the required credentials are available.
 
+## App self-updates
+
+`electron-updater` uses this project's public GitHub releases. `electron-builder.yml` generates update metadata with the GitHub provider; `--publish never` keeps publication in the release workflow. Upload the updated `app/`, `scripts/`, `tests/`, `.github/workflows/`, `electron-builder.yml`, `package.json`, and `package-lock.json` together.
+
+The release workflow uploads installers, archives, checksums and blockmaps first, then `latest.yml`, `latest-linux.yml`, and the combined `latest-mac.yml`. Each macOS matrix job creates separate metadata so Intel and Apple Silicon downloads cannot overwrite each other. The build workflow tests the actual downloader against a local fixture and rejects a corrupted SHA-512 download without running an installer.
+
+Installed Windows builds and original Linux AppImages download updates automatically. Installation requires the Battle Hub's **Restart to update** action and no active battles. Ordinary application exit does not install updates. Unsigned macOS, Windows ZIP and extracted Linux builds check releases and offer their matching downloads instead. macOS automatic installation requires Apple code signing and a signed update path; this configuration deliberately keeps unsigned builds on the manual installation path.
+
+Publish a higher stable version to deliver an update; update both package files and create the matching tag as usual. A released tag must contain these changes, not just the workflow files. Already installed 1.0.0 builds without this updater cannot acquire it automatically: users must install the first updater-enabled release once. Source checkouts and audit profiles never download app installers. `app/update-distribution.cjs` is `public` in this repository; private copies use `private` to prevent replacement by a public installer.
+
 ## Local builds
 
 Use a native machine matching the target operating system and architecture, with Node.js 24 and Git:

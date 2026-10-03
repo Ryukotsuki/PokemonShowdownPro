@@ -50,8 +50,16 @@
             <div id="addons-list"></div>
             <p class="module-note">Switches and settings are saved. Reload Showdown to apply changes. Turn an add-on off to use the original client behavior.</p>
           </section>
+          <section class="module" aria-labelledby="app-updates-title">
+            <div class="module-heading"><span class="module-index">02</span><div><h2 id="app-updates-title">App updates</h2><p>Keep Pokémon Showdown Pro up to date.</p></div></div>
+            <label class="setting-row" for="auto-update-app"><span><strong>Automatic app updates</strong><small>Check daily between battles</small></span><input type="checkbox" id="auto-update-app"></label>
+            <p id="app-update-status" class="helper" role="status">App updates have not been checked yet.</p>
+            <button id="check-app-updates" class="action-button" type="button">Check for app updates</button>
+            <button id="app-update-action" class="action-button" type="button" hidden>Restart to update</button>
+            <p class="module-note">Your settings stay saved. Updates never restart Pro during a battle.</p>
+          </section>
           <section class="module" aria-labelledby="updates-title">
-            <div class="module-heading"><span class="module-index">02</span><div><h2 id="updates-title">Updates</h2><p>Keep add-ons and Showdex up to date.</p></div></div>
+            <div class="module-heading"><span class="module-index">03</span><div><h2 id="updates-title">Add-on updates</h2><p>Keep add-ons and Showdex up to date.</p></div></div>
             <label class="setting-row" for="auto-update-addons"><span><strong>Automatic updates</strong><small>Check daily between battles</small></span><input type="checkbox" id="auto-update-addons"></label>
             <p id="addon-update-status" class="helper" role="status">Updates have not been checked yet.</p>
             <button id="check-addon-updates" class="action-button" type="button">Check now</button>

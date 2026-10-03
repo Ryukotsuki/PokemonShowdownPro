@@ -31,12 +31,19 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Check out release scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          persist-credentials: false
       - name: Download all platform builds
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: PokemonShowdownPro-*
           merge-multiple: true
           path: release-files
+      - name: Combine macOS update metadata
+        run: node scripts/merge-update-metadata.cjs release-files
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ github.token }}
@@ -45,4 +52,9 @@ jobs:
         shell: bash
         run: |
           gh release view "$RELEASE_TAG" >/dev/null
-          gh release upload "$RELEASE_TAG" release-files/* --clobber
+          # Publish downloads before update manifests so clients never see a
+          # manifest whose installer has not finished uploading.
+          shopt -s nullglob
+          packages=(release-files/*.exe release-files/*.zip release-files/*.dmg release-files/*.AppImage release-files/*.tar.gz release-files/*.sha256 release-files/*.blockmap)
+          gh release upload "$RELEASE_TAG" "${packages[@]}" --clobber
+          gh release upload "$RELEASE_TAG" release-files/latest.yml release-files/latest-linux.yml release-files/latest-mac.yml --clobber

@@ -37,7 +37,11 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   runAfterFinish: false
-publish: null
+publish:
+  provider: github
+  owner: Ryukotsuki
+  repo: PokemonShowdownPro
+  releaseType: release
 mac:
   icon: app/assets/icons/icon.icns
   category: public.app-category.games
