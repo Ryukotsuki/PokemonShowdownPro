@@ -66,6 +66,10 @@ These workflows do not include Windows signing certificates or Apple Developer s
 
 `electron-updater` uses this project's public GitHub releases. `electron-builder.yml` generates update metadata with the GitHub provider; `--publish never` keeps publication in the release workflow. Upload the updated `app/`, `scripts/`, `tests/`, `.github/workflows/`, `electron-builder.yml`, `package.json`, and `package-lock.json` together.
 
+The release feed must be publicly accessible; logging into GitHub in a browser does not authenticate the app updater. An inaccessible feed or missing stable release shows an availability message, and missing update metadata shows a separate publishing message. Do not embed a GitHub access token in the app.
+
+Updater diagnostics are saved in the app's user data directory: `app-update.log` retains the latest app update failure; `addon-updates/last-check.log` records the latest add-on check and `addon-updates/last-failure.log` retains the latest failed check even after a successful retry. On Windows, this directory is `%APPDATA%/pokemon-showdown-pro`. Validation logs are preserved before temporary update generations are cleaned up.
+
 The release workflow uploads installers, archives, checksums and blockmaps first, then `latest.yml`, `latest-linux.yml`, and the combined `latest-mac.yml`. Each macOS matrix job creates separate metadata so Intel and Apple Silicon downloads cannot overwrite each other. The build workflow tests the actual downloader against a local fixture and rejects a corrupted SHA-512 download without running an installer.
 
 Installed Windows builds and original Linux AppImages download updates automatically. Installation requires the Battle Hub's **Restart to update** action and no active battles. Ordinary application exit does not install updates. Unsigned macOS, Windows ZIP and extracted Linux builds check releases and offer their matching downloads instead. macOS automatic installation requires Apple code signing and a signed update path; this configuration deliberately keeps unsigned builds on the manual installation path.

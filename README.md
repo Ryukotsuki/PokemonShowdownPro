@@ -128,6 +128,8 @@ Showdex's theme is independent of the main client. Add-on windows follow the app
 
 macOS builds are currently unsigned, so they offer **Download update** for the correct Intel or Apple Silicon release. Windows portable ZIP and extracted Linux builds also use a download-and-install fallback. Source checkouts do not update themselves. Existing releases without the updater need one manual upgrade to a build containing it.
 
+App update checks require a publicly accessible GitHub release. Until one is available, Pro keeps the installed version and explains that no public release can be accessed.
+
 **Add-on updates** separately checks the six browser add-ons and stable Showdex releases once a day while no battles are active.
 
 New packages receive the Pro styling and compatibility patches, then run checks against both Showdown clients in isolated, muted profiles. Verified updates apply when you restart the app. Failed checks keep the installed versions; failed startup restores the previous version.

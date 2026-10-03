@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { EventEmitter } = require('node:events');
-const { AppUpdates, updateMode, releaseDownload, newerVersion } = require('../app/app-updates.cjs');
+const { AppUpdates, updateMode, releaseDownload, newerVersion, updateFailure } = require('../app/app-updates.cjs');
 const { loadPreferences, savePreferences } = require('../app/preferences.cjs');
 const { prepare } = require('../scripts/prepare-update-metadata.cjs');
 const { merge } = require('../scripts/merge-update-metadata.cjs');
@@ -69,9 +69,45 @@ test('checksum or network errors preserve current install and can be retried', a
   fixture.native.downloadUpdate = async () => { fixture.native.emit('error', new Error('checksum mismatch')); throw new Error('checksum mismatch'); };
   await fixture.updates.check(true);
   assert.equal(fixture.updates.status, 'error'); assert.equal(fixture.updates.busy, false);
+  assert.match(fixture.updates.message, /failed verification/);
+  const logFile = path.join(fixture.options.app.getPath(), 'app-update.log');
+  const log = fs.readFileSync(logFile, 'utf8');
+  assert.match(log, /checksum mismatch/);
   await fixture.updates.action(); assert.equal(fixture.counts().installs, 0);
   fixture.native.downloadUpdate = async () => fixture.native.emit('update-downloaded', { version: '1.1.0' });
   await fixture.updates.check(true); assert.equal(fixture.updates.status, 'ready');
+  assert.equal(fs.readFileSync(logFile, 'utf8'), log);
+});
+test('inaccessible public releases have an actionable status and a successful retry clears it', async t => {
+  const fixture = setup(t, { exists: () => false, arch: 'x64', fetchRelease: async () => {
+    throw Object.assign(new Error('Release check returned 404'), { statusCode: 404 });
+  } });
+  await fixture.updates.check(true);
+  assert.equal(fixture.updates.status, 'unavailable');
+  assert.match(fixture.updates.message, /public GitHub release/);
+  assert.equal(fixture.updates.snapshot().canDownload, false);
+  assert.equal(fixture.updates.snapshot().canRestart, false);
+  assert.equal(fixture.updates.busy, false);
+  assert.match(fs.readFileSync(path.join(fixture.options.app.getPath(), 'app-update.log'), 'utf8'), /404/);
+  assert.deepEqual(fixture.counts(), { checks: 0, downloads: 0, installs: 0 });
+  fixture.updates.fetchRelease = async () => ({ tag_name: 'v1.0.0' });
+  await fixture.updates.check(true);
+  assert.equal(fixture.updates.status, 'current');
+});
+test('installer feed errors distinguish missing metadata, access, connectivity and missing downloads', async t => {
+  const fixture = setup(t);
+  fixture.native.checkForUpdates = async () => {
+    const error = Object.assign(new Error('404 Not Found'), { statusCode: 404, code: 'HTTP_ERROR_404' });
+    fixture.native.emit('error', error); throw error;
+  };
+  await fixture.updates.check(true);
+  assert.equal(fixture.updates.status, 'unavailable');
+  assert.equal(fixture.counts().downloads, 0);
+  assert.match(updateFailure({ code: 'ERR_UPDATER_CHANNEL_FILE_NOT_FOUND', message: 'HTTP_ERROR_404' }).message, /missing its update files/);
+  assert.match(updateFailure({ code: 'ERR_UPDATER_LATEST_VERSION_NOT_FOUND', message: 'HTTP_ERROR_403' }).message, /limited or denied/);
+  assert.match(updateFailure({ message: 'fetch failed', cause: { code: 'ENOTFOUND' } }).message, /connection/);
+  assert.equal(updateFailure({ statusCode: 404 }, 'download').status, 'error');
+  assert.equal(updateFailure(new Error('Unknown problem')).status, 'error');
 });
 test('only one check runs, and stopping during a download prevents installation', async t => {
   const fixture = setup(t);

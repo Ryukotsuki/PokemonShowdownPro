@@ -15,24 +15,39 @@ function runProcess(command,args,{cwd,env=process.env,signal,timeout=10*60*1000,
     signal?.addEventListener('abort',stop,{once:true});if(signal?.aborted)stop();
   });
 }
+function saveUpdateDiagnostics(directory,stage,{result,error,output=''}) {
+  // Generation folders are removed after a failed check. Preserve their diagnostics first.
+  try {
+    const fs=require('node:fs');
+    const logs=fs.readdirSync(stage).filter(file=>file.endsWith('-validation.log')).map(file=>file+'\n'+fs.readFileSync(path.join(stage,file),'utf8').slice(-50000));
+    const failures=result?.errors?.join('\n')||'';
+    const details=[failures,error?.stack||error?.message,logs.join('\n\n'),output].filter(Boolean).join('\n\n').slice(-150000)||'No newer packages found.';
+    fs.mkdirSync(directory,{recursive:true});
+    const log=new Date().toISOString()+'\n'+details;
+    fs.writeFileSync(path.join(directory,'last-check.log'),log);
+    if(error||result?.errors?.length)fs.writeFileSync(path.join(directory,'last-failure.log'),log);
+  } catch {}
+}
 function prepareUpdates(root,directory,{verifyBundled=false}={}) {
   return async({stage,current,signal,notify})=>{
     const fs=require('node:fs'),scratch=fs.mkdtempSync(path.join(os.tmpdir(),'ps-au-'));
+    let buffered='',output='';
+    try {
     fs.writeFileSync(path.join(stage,'request.json'),JSON.stringify({current,directory,scratch,verifyBundled}));
     const bundledNode=path.join(root,'build/update-runtime',process.platform==='win32'?'node.exe':'node');
     const node=fs.existsSync(bundledNode)?bundledNode:process.execPath;
     const env={...process.env,ELECTRON_RUN_AS_NODE:'1',SHOWDOWN_PRO_ELECTRON_EXECUTABLE:process.versions.electron?process.execPath:require('electron'),SHOWDOWN_PRO_APP_ROOT:root};
-    let buffered='';
-    try {
-    await runProcess(node,[path.join(root,'scripts/prepare-addon-updates.cjs'),stage],{cwd:root,env,signal,timeout:20*60*1000,onOutput:text=>{buffered+=text;const lines=buffered.split('\n');buffered=lines.pop();for(const line of lines){try{const status=JSON.parse(line);if(status.message)notify(status.message);}catch{}}}});
+    await runProcess(node,[path.join(root,'scripts/prepare-addon-updates.cjs'),stage],{cwd:root,env,signal,timeout:20*60*1000,onOutput:text=>{output=(output+text).slice(-50000);buffered+=text;const lines=buffered.split('\n');buffered=lines.pop();for(const line of lines){try{const status=JSON.parse(line);if(status.message)notify(status.message);}catch{}}}});
     const result=JSON.parse(fs.readFileSync(path.join(stage,'result.json'),'utf8'));
-    const logs=fs.readdirSync(stage).filter(file=>file.endsWith('-validation.log')).map(file=>file+'\n'+fs.readFileSync(path.join(stage,file),'utf8').slice(-50000));
-    fs.writeFileSync(path.join(directory,'last-check.log'),logs.join('\n\n')||'No newer packages found.');
+    saveUpdateDiagnostics(directory,stage,{result,output});
     return result;
+    } catch(error) {
+      saveUpdateDiagnostics(directory,stage,{error,output});
+      throw error;
     } finally {
       if(!scratch.startsWith(path.resolve(os.tmpdir())+path.sep))throw new Error('Invalid temporary update directory');
       fs.rmSync(scratch,{recursive:true,force:true,maxRetries:10,retryDelay:200});
     }
   };
 }
-module.exports={runProcess,prepareUpdates};
+module.exports={runProcess,prepareUpdates,saveUpdateDiagnostics};

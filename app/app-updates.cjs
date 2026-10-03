@@ -36,6 +36,27 @@ function releaseDownload(release, current, platform, arch) {
   return { version, url };
 }
 
+function updateFailure(error, phase = 'check') {
+  const detail = `${error?.code || ''} ${error?.message || ''} ${error?.cause?.code || ''} ${error?.cause?.message || ''}`;
+  const status = error?.statusCode || error?.cause?.statusCode;
+  if (/ERR_UPDATER_CHANNEL_FILE_NOT_FOUND/.test(detail)) return {
+    status: 'unavailable', message: 'The latest release is missing its update files. Check again after the release finishes publishing.'
+  };
+  if (phase === 'check' && (status === 404 || /HTTP_ERROR_404|\b404\b|ERR_UPDATER_NO_PUBLISHED_VERSIONS|No published versions on GitHub/.test(detail))) return {
+    status: 'unavailable', message: 'No public app release is accessible. Updates require a public GitHub release.'
+  };
+  if (status === 403 || status === 429 || /HTTP_ERROR_(403|429)|rate limit/i.test(detail)) return {
+    status: 'error', message: 'GitHub limited or denied this update check. Try again later. Your current version is still installed.'
+  };
+  if (/checksum|sha512|ERR_UPDATER_INVALID_SIGNATURE/i.test(detail)) return {
+    status: 'error', message: 'The app update failed verification. Your current version is still installed. Try checking again.'
+  };
+  if (/ENOTFOUND|EAI_AGAIN|ECONNRESET|ECONNREFUSED|ETIMEDOUT|TimeoutError|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED|ERR_CONNECTION|ERR_NETWORK|fetch failed/i.test(detail)) return {
+    status: 'error', message: 'Could not connect to the app update service. Check your connection and try again. Your current version is still installed.'
+  };
+  return { status: 'error', message: 'App update failed. Your current version is still installed. Try checking again.' };
+}
+
 class AppUpdates {
   constructor({ app, distribution = 'public', platform = process.platform, arch = process.arch, env = process.env,
     execPath = process.execPath, exists, createUpdater, fetchRelease, openExternal, enabled = () => true,
@@ -51,7 +72,7 @@ class AppUpdates {
           : 'App updates have not been checked yet.';
     this.fetchRelease = fetchRelease || (async () => {
       const response = await require('electron').net.fetch(API, { headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(20000) });
-      if (!response.ok) throw new Error(`Release check returned ${response.status}`);
+      if (!response.ok) throw Object.assign(new Error(`Release check returned ${response.status}`), { statusCode: response.status });
       return response.json();
     });
     if (this.mode === 'automatic') {
@@ -64,14 +85,14 @@ class AppUpdates {
         this.updater.allowPrerelease = false;
         this.updater.allowDowngrade = false;
         this.updater.disableWebInstaller = true;
-        this.updater.on('error', () => this.fail());
+        this.updater.on('error', error => this.fail(error));
         this.updater.on('download-progress', progress => {
           if (!this.stopped && this.status !== 'error') this.change('downloading', `Downloading v${this.version}… ${Math.max(0, Math.min(100, Math.round(progress.percent || 0)))}%`);
         });
         this.updater.on('update-downloaded', info => {
           if (!this.stopped) { this.version = info.version; this.change('ready', `v${info.version} is ready. Restart Pro when your battles finish.`); }
         });
-      } catch { this.fail(); }
+      } catch (error) { this.fail(error); }
     }
   }
   snapshot() {
@@ -81,7 +102,17 @@ class AppUpdates {
       canDownload: this.mode === 'manual' && this.status === 'available' };
   }
   change(status, message) { if (this.stopped) return; this.status = status; this.message = message; this.onChange(); }
-  fail() { this.change('error', 'App update failed. Your current version is still installed. Try checking again.'); }
+  fail(error) {
+    if (this.stopped) return;
+    const failure = updateFailure(error, this.phase);
+    // Keep the last failure even after a successful retry; diagnostics never block the app.
+    try {
+      fs.mkdirSync(path.dirname(this.file), { recursive: true });
+      const details = `${error?.code || ''} ${error?.statusCode || ''}\n${error?.stack || error?.message || String(error)}\n${error?.cause?.stack || ''}`;
+      fs.writeFileSync(path.join(path.dirname(this.file), 'app-update.log'), `${new Date(this.now()).toISOString()}\n${this.platform}/${this.arch}, ${this.mode}, v${this.app.getVersion()}, ${this.phase || 'initialization'}\n${failure.message}\n${details.slice(-50000)}\n`);
+    } catch {}
+    this.change(failure.status, failure.message);
+  }
   recordCheck() {
     this.lastChecked = this.now();
     fs.mkdirSync(path.dirname(this.file), { recursive: true });
@@ -92,7 +123,7 @@ class AppUpdates {
   async check(manual = false) {
     if (this.stopped || this.busy || !this.snapshot().supported || this.status === 'ready') return;
     if (!manual && (!this.enabled() || !this.canInstall() || this.now() - this.lastChecked < DAY)) return;
-    this.busy = true; this.change('checking', 'Checking for a new Pro release…');
+    this.phase = 'check'; this.busy = true; this.change('checking', 'Checking for a new Pro release…');
     try {
       this.recordCheck();
       if (this.mode === 'manual') {
@@ -106,20 +137,22 @@ class AppUpdates {
         if (this.stopped) return;
         if (result && newerVersion(result.updateInfo?.version, this.app.getVersion())) {
           this.version = result.updateInfo.version;
+          this.phase = 'download';
           this.change('downloading', `Downloading v${this.version}…`);
           await this.updater.downloadUpdate();
         } else this.change('current', `You’re up to date (v${this.app.getVersion()}).`);
       }
-    } catch { this.fail(); }
+    } catch (error) { this.fail(error); }
     finally { this.busy = false; if (!this.stopped) this.onChange(); }
   }
   async action() {
     if (this.stopped || this.busy) return;
     if (this.status === 'ready') {
       if (!this.canInstall()) { this.change('ready', 'Finish your battles before restarting Pro to install the update.'); return; }
-      try { this.updater.quitAndInstall(false, true); } catch { this.fail(); }
+      this.phase = 'install';
+      try { this.updater.quitAndInstall(false, true); } catch (error) { this.fail(error); }
     } else if (this.snapshot().canDownload && this.download) await this.openExternal(this.download.url);
   }
   stop() { this.stopped = true; }
 }
-module.exports = { AppUpdates, updateMode, newerVersion, releaseDownload };
+module.exports = { AppUpdates, updateMode, newerVersion, releaseDownload, updateFailure };
