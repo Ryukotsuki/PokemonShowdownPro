@@ -9,16 +9,17 @@
   <link rel="stylesheet" href="panel.css">
 </head>
 <body>
-  <aside class="sidebar" aria-label="Battle hub">
+  <aside class="sidebar" aria-label="Battle Hub">
     <div class="hub-controls">
+      <button id="fullscreen-toggle" class="icon-button" type="button" aria-label="Enter fullscreen" aria-pressed="false" aria-keyshortcuts="F11"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="fullscreen-enter" d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><path class="fullscreen-exit" d="M3 8h5V3m8 0v5h5M8 21v-5H3m13 5v-5h5"/></svg></button>
       <button id="sidebar-toggle" class="icon-button" type="button" aria-label="Collapse Battle Hub" aria-expanded="true" aria-controls="hub-content">☰</button>
     </div>
     <div id="hub-content">
       <header class="hero">
-        <div class="brand"><span class="brand-mark" aria-hidden="true"><img src="showdown-pro://assets/icons/icon.png" alt="" width="42" height="42"></span><div><span class="eyebrow">POKÉMON SHOWDOWN PRO</span><h1>Battle hub <span id="app-version" class="app-version"></span></h1></div></div>
+        <div class="brand"><span class="brand-mark" aria-hidden="true"><img src="showdown-pro://assets/icons/icon.png" alt="" width="42" height="42"></span><div><span class="eyebrow">POKÉMON SHOWDOWN PRO</span><h1>Battle Hub <span id="app-version" class="app-version"></span></h1></div></div>
         <div class="connection"><span class="connection-dot" aria-hidden="true"></span><span id="client-status">Connecting to Showdown…</span></div>
       </header>
-      <nav class="hub-tabs" role="tablist" aria-label="Battle hub sections">
+      <nav class="hub-tabs" role="tablist" aria-label="Battle Hub sections">
         <button id="tab-battle" type="button" role="tab" aria-selected="true" aria-controls="page-battle" data-tab="battle">Battle</button>
         <button id="tab-addons" type="button" role="tab" aria-selected="false" aria-controls="page-addons" data-tab="addons" tabindex="-1">Add-ons</button>
         <button id="tab-messages" type="button" role="tab" aria-selected="false" aria-controls="page-messages" data-tab="messages" tabindex="-1">Messages</button>

@@ -3,6 +3,7 @@ contextBridge.exposeInMainWorld('pro', {
   getState: () => ipcRenderer.invoke('panel:state'),
   setSetting: (key, value) => ipcRenderer.invoke('panel:setting', key, value),
   reload: () => ipcRenderer.invoke('panel:reload'),
+  toggleFullscreen: () => ipcRenderer.invoke('panel:fullscreen'),
   checkUpdates: () => ipcRenderer.invoke('panel:check-updates'),
   showHubTooltip: (visible, top, control) => ipcRenderer.send('panel:hub-tooltip', visible, top, control),
   addonOptions: key => ipcRenderer.invoke('panel:addon-options',key),

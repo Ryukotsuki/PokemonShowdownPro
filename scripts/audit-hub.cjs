@@ -16,6 +16,7 @@ module.exports = async ({ window, client, root, state, hubTooltip, waitFor, acti
   fs.mkdirSync(out, { recursive: true });
   const setting = (key,value) => panel.executeJavaScript(`pro.setSetting(${JSON.stringify(key)},${JSON.stringify(value)})`);
   await waitFor(() => ui('return !!document.querySelector(".empty");'));
+  await require('./audit-window-controls.cjs')({window,client,root,state,waitFor});
   await require('./audit-update-ui.cjs')({window,client,root});
   assert.deepEqual(await ui('return [...document.querySelectorAll("[role=tab]")].map(tab=>tab.dataset.tab);'), ['battle','addons','messages','history']);
   assert.equal(await ui('return typeof pro.setMode;'), 'undefined');

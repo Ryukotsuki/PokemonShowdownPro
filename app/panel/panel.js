@@ -16,7 +16,7 @@ function messageCounts() {
   for(const phase of ['start','end']) $(phase+'-message-count').textContent=$(`${phase}-message-text`).value.length+' / 280';
 }
 function updateHubTooltip() {
-  const controls=[$('sidebar-toggle')];
+  const controls=[$('fullscreen-toggle'),$('sidebar-toggle')];
   const visible=control=>control.checkVisibility();
   const target=controls.find(control=>visible(control) && control.matches(':hover')) || controls.find(control=>visible(control) && control.matches(':focus-visible'));
   window.pro.showHubTooltip(!!target, target?.getBoundingClientRect().bottom, target?.id);
@@ -41,6 +41,8 @@ function render(state) {
   document.title='Pokémon Showdown Pro';
   const collapsed=!!state.ui?.collapsed;
   document.body.dataset.collapsed=String(collapsed);
+  $('fullscreen-toggle').setAttribute('aria-pressed',String(!!state.ui?.fullscreen));
+  $('fullscreen-toggle').setAttribute('aria-label',state.ui?.fullscreen?'Exit fullscreen':'Enter fullscreen');
   $('hub-content').hidden=collapsed;
   $('sidebar-toggle').setAttribute('aria-expanded',String(!collapsed));
   $('sidebar-toggle').setAttribute('aria-label',collapsed ? 'Expand Battle Hub' : 'Collapse Battle Hub');
@@ -123,8 +125,9 @@ function render(state) {
     }
   }
 }
+$('fullscreen-toggle').onclick=()=>hubAction(async()=>render(await window.pro.toggleFullscreen()));
 $('sidebar-toggle').onclick=()=>hubAction(async()=>render(await window.pro.setSetting('sidebarCollapsed',!latestState?.ui?.collapsed)));
-for (const id of ['sidebar-toggle']) {
+for (const id of ['fullscreen-toggle','sidebar-toggle']) {
   for (const event of ['mouseenter','mouseleave','focus','blur']) $(id).addEventListener(event,updateHubTooltip);
 }
 window.addEventListener('blur',()=>window.pro.showHubTooltip(false));

@@ -568,6 +568,21 @@ html.showdown-new-client .menugroup a.blocklink:active {
   border-color: #3b5668 !important;
   box-shadow: none !important;
 }
+/* The login popup uses a bare disabled .cur button while signing in. */
+.ps-popup .buttonbar button.cur:disabled {
+  appearance: none !important;
+  padding: 4px 10px !important;
+  color: #b9d5e5 !important;
+  background: linear-gradient(180deg, #29485c, #203a4e) !important;
+  border: 1px solid #4c7187 !important;
+  border-radius: 6px !important;
+  box-shadow: inset 0 1px #ffffff1b !important;
+  font: inherit !important;
+  line-height: 1.4 !important;
+  text-shadow: none !important;
+  opacity: 1 !important;
+  cursor: wait !important;
+}
 .ps-room .button:focus-visible, .ps-popup .button:focus-visible,
 html.showdown-new-client .menugroup a.blocklink:focus-visible {
   outline: 2px solid #83d2fa !important;
@@ -648,6 +663,8 @@ button.select:not(:where([data-showdex-module] *, [data-tippy-root] *))::after {
   border-radius: 9px !important;
   box-shadow: 0 20px 45px #0009, inset 0 1px #ffffff12 !important;
 }
+/* Keep popup containers on their normal rounded border in every focus state. */
+.ps-popup:focus, .ps-popup:focus-visible { outline: none !important; }
 /* The client-version notice uses a yellow construction pattern upstream. */
 html.dark body .ps-popup .construction {
   box-sizing: border-box !important;

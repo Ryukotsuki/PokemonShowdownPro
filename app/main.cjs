@@ -82,7 +82,7 @@ async function refreshReplayOutcomes() {
   await replayOutcomeJob;
 }
 function state() {
-  return { appVersion, theme, showdexStatus, clientStatus, postMatchStatus, messageStatus, recentReplays:preferences.recentReplays, replayOutcomePending:[...replayOutcomePending], ui:{collapsed:preferences.sidebarCollapsed,tab:preferences.sidebarTab}, addonUpdates:addonUpdates?.snapshot(), addons:browserAddons?.snapshot(preferences.addons)||[], reloadPending:preferences.showdexEnabled!==appliedShowdex || !!browserAddons?.pending(preferences.addons), statisticsError, statistics: { allTime: lifetimeRecord.allTime, session: sessionRecord }, settings:{...preferences}, rooms: [...battles.rooms.values()].reverse().filter(room => !room.ended).map(room => ({
+  return { appVersion, theme, showdexStatus, clientStatus, postMatchStatus, messageStatus, recentReplays:preferences.recentReplays, replayOutcomePending:[...replayOutcomePending], ui:{collapsed:preferences.sidebarCollapsed,tab:preferences.sidebarTab,fullscreen:!!window?.isFullScreen()}, addonUpdates:addonUpdates?.snapshot(), addons:browserAddons?.snapshot(preferences.addons)||[], reloadPending:preferences.showdexEnabled!==appliedShowdex || !!browserAddons?.pending(preferences.addons), statisticsError, statistics: { allTime: lifetimeRecord.allTime, session: sessionRecord }, settings:{...preferences}, rooms: [...battles.rooms.values()].reverse().filter(room => !room.ended).map(room => ({
     id: room.id, title: room.title || room.id, turn: room.turn, status: room.status,
   })) };
 }
@@ -150,6 +150,17 @@ function processFinished(room) {
 }
 function trustedPanel(event) { return event.sender === window?.webContents && event.senderFrame === window.webContents.mainFrame; }
 function trustedClient(event) { return event.sender === client?.webContents && event.senderFrame === client.webContents.mainFrame && event.senderFrame.url.startsWith(CLIENT_URL); }
+function toggleFullscreen() {
+  if(window&&!window.isDestroyed()){hubTooltip?.hide();window.setFullScreen(!window.isFullScreen());publish();}
+  return state();
+}
+app.on('web-contents-created',(_event,contents)=>require('./window-shortcuts.cjs').installWindowShortcuts(contents,{
+  toggleFullscreen,
+  reload:()=>{if(client&&!client.webContents.isDestroyed())void reloadClient();},
+  devTools:()=>client?.webContents.openDevTools({mode:'detach'}),
+  quit:()=>app.quit(),
+}));
+ipcMain.handle('panel:fullscreen',event=>trustedPanel(event)?toggleFullscreen():null);
 ipcMain.handle('panel:state', event => trustedPanel(event) ? state() : null);
 ipcMain.handle('panel:check-updates', async event => {if(trustedPanel(event)){await addonUpdates?.check(true);return state();}});
 ipcMain.handle('panel:setting', (event, key, value) => { if (trustedPanel(event)) return setSetting(key, value); });
@@ -164,6 +175,7 @@ ipcMain.on('panel:hub-tooltip', (event, visible, top, control) => {
   if (!trustedPanel(event) || !hubTooltip) return;
   const labels={
     'sidebar-toggle':preferences.sidebarCollapsed ? 'Expand Battle Hub' : 'Collapse Battle Hub',
+    'fullscreen-toggle':window?.isFullScreen() ? 'Exit fullscreen (F11)' : 'Enter fullscreen (F11)',
   };
   if (visible === true && labels[control]) void hubTooltip.show({ collapsed:preferences.sidebarCollapsed, label:labels[control], theme, top }).catch(() => hubTooltip?.hide());
   else hubTooltip.hide();
@@ -293,6 +305,7 @@ async function installClient() {
   throw new Error('Showdown client did not become ready. Reload to retry.');
 }
 async function createWindow() {
+  Menu.setApplicationMenu(null);
   preferencesFile = path.join(app.getPath('userData'), 'preferences.json');
   const previousFile = path.join(app.getPath('userData'), 'assistant-preferences.json');
   preferences = loadPreferences(fs.existsSync(preferencesFile) ? preferencesFile : previousFile);
@@ -340,7 +353,9 @@ async function createWindow() {
       console.error('Failed smoke script:',source.slice(0,1800));throw error;
     });
   }
-  window.on('resize', layout); layout();
+  window.on('resize', layout);
+  for(const event of ['enter-full-screen','leave-full-screen'])window.on(event,()=>setImmediate(()=>{layout();publish();}));
+  layout();
   window.on('closed', () => { closing = true; navigationVersion++; hubTooltip?.destroy(); if (!client.webContents.isDestroyed()) client.webContents.close(); window = null; });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
@@ -354,11 +369,7 @@ async function createWindow() {
   client.webContents.on('did-fail-load', (_event, code, description, _url, mainFrame) => {
     if (mainFrame && code !== -3) { clientStatus = `Connection failed: ${description}`; publish(); }
   });
-  Menu.setApplicationMenu(Menu.buildFromTemplate([
-    { label: 'App', submenu: [{ label: 'Reload Showdown', accelerator: 'CmdOrCtrl+R', click: () => void reloadClient() }, { type: 'separator' }, { role: 'quit' }] },
-    { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
-    { label: 'View', submenu: [{ role: 'togglefullscreen' }, { label: 'Showdown developer tools', accelerator: 'CmdOrCtrl+Shift+I', click: () => client.webContents.openDevTools({ mode: 'detach' }) }] },
-  ]));
+  window.setMenu(null);
   await window.loadURL('showdown-pro://app/index.html');
   window.contentView.addChildView(client);
   client.setVisible(true);
@@ -382,6 +393,10 @@ async function createWindow() {
       throw new Error('Smoke test timed out: ' + JSON.stringify(state()));
     };
     await waitFor(() => showdexStatus === 'Showdex loaded');
+    if(process.argv.includes('--window-controls-only')) {
+      await require('../scripts/audit-window-controls.cjs')({window,client,root,state,waitFor});
+      app.exit(0);return;
+    }
     if (!process.argv.includes('--theme-audit') && !process.argv.includes('--theme-only')) {
       await require('../scripts/audit-hub.cjs')({ window, client, root, state, hubTooltip, waitFor, actions:global.__sidebarAudit });
       app.exit(0); return;

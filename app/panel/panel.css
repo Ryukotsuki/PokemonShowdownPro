@@ -127,7 +127,7 @@ footer p { margin: 11px 3px 0; color: #738e9f; font-size: 10px; line-height: 1.5
 .sidebar { display: flex; flex-direction: column; overflow: hidden; }
 #hub-content { display: flex; flex-direction: column; min-height: 0; height: 100%; }
 .hero { flex-shrink: 0; padding: 18px 18px 16px; }
-.brand { gap: 10px; padding-right: 28px; }
+.brand { gap: 10px; padding-right: 68px; }
 .brand-mark { flex-basis: 38px; width: 38px; height: 38px; }
 .eyebrow { font-size: 8px; letter-spacing: 1px; white-space: nowrap; }
 h1 { font-size: 19px; }
@@ -135,10 +135,14 @@ h1 { font-size: 19px; }
 .hub-controls { position: absolute; z-index: 3; top: 18px; right: 12px; display: flex; gap: 5px; }
 .icon-button { width: 32px; height: 32px; padding: 0; border: 1px solid #527b94; border-radius: 7px; color: #c7e8f8; background: #23465c; font-size: 19px; line-height: 1; }
 .icon-button:hover { background: #315c74; border-color: var(--blue); }
-#sidebar-toggle:hover { color: var(--blue); background: var(--surface-raised); border-color: var(--blue); box-shadow: 0 0 0 2px #66c0f41c; }
+#fullscreen-toggle svg { display: block; width: 17px; height: 17px; margin: auto; }
+#fullscreen-toggle .fullscreen-exit, #fullscreen-toggle[aria-pressed="true"] .fullscreen-enter { display: none; }
+#fullscreen-toggle[aria-pressed="true"] .fullscreen-exit { display: inline; }
+#fullscreen-toggle:hover, #sidebar-toggle:hover { color: var(--blue); background: var(--surface-raised); border-color: var(--blue); box-shadow: 0 0 0 2px #66c0f41c; }
 body[data-collapsed="true"] .sidebar { width: 48px; }
 body[data-collapsed="true"] .hub-controls { top: 14px; right: 7px; flex-direction: column; align-items: center; gap: 12px; }
 body[data-collapsed="true"] #sidebar-toggle { order: 0; }
+body[data-collapsed="true"] #fullscreen-toggle { order: 3; }
 .hub-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; flex-shrink: 0; padding: 4px; margin: 12px 16px 0; border: 1px solid var(--border); border-radius: 8px; background: #0e1c28; }
 .hub-tabs button { min-width: 0; padding: 8px 2px; border: 1px solid transparent; border-radius: 5px; color: var(--muted); background: transparent; font-size: 11px; font-weight: 650; }
 .hub-tabs button:hover { color: #e8f1f7; background: #254158; }
