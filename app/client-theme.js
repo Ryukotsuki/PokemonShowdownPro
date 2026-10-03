@@ -322,6 +322,7 @@
     installRoomControls();
     installTCGPages();
     ps.update();
+    document.documentElement.dataset.showdownProThemeReady = 'true';
     window.__showdownProTheme = true;
     return true;
   }
@@ -367,6 +368,7 @@
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (prefs('theme') === 'system') apply(popup, { currentTarget: { value: 'system' } });
   });
+  document.documentElement.dataset.showdownProThemeReady = 'true';
   window.__showdownProTheme = true;
   return true;
 })();

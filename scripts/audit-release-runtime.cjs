@@ -4,6 +4,18 @@ module.exports=async({app,window,client,root,addonUpdates,browserAddons,state})=
   assert.equal(app.isPackaged,true,'This audit must run the packaged application');
   for(let i=0;i<600&&state().showdexStatus!=='Showdex loaded';i++)await pause(100);
   assert.equal(state().showdexStatus,'Showdex loaded',JSON.stringify(state()));
+  for(let i=0;i<100;i++) {
+    if(await client.webContents.executeJavaScript("document.documentElement.classList.contains('showdex-pro')"))break;
+    await pause(100);
+  }
+  assert.deepEqual(await client.webContents.executeJavaScript(`({
+    newClient: !!window.PS?.prefs?.set,
+    theme: window.PS?.prefs?.theme,
+    pro: document.documentElement.classList.contains('showdown-pro'),
+    showdexPro: document.documentElement.classList.contains('showdex-pro')
+  })`),{newClient:true,theme:'pro',pro:true,showdexPro:true},'Packaged apps must default to the new client and both Pro themes');
+  assert.equal(state().theme,'pro');
+  assert.equal(await window.webContents.executeJavaScript('document.documentElement.dataset.theme'),'pro');
   assert.equal(browserAddons.active.size,6);assert.equal(browserAddons.errors.size,0);
   assert.equal(window.webContents.isAudioMuted(),true);assert.equal(client.webContents.isAudioMuted(),true);
   assert.equal(window.getTitle(),'Pokémon Showdown Pro');

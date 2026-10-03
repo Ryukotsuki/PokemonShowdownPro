@@ -4,7 +4,9 @@ function transform(source, file) {
     if (source.split(before).length !== 2) throw new Error(`Showdex Pro patch anchor changed: ${file}: ${before.slice(0,80)}`);
     source = source.replace(before, after);
   };
-  if (file.endsWith('/interfaces/app/ShowdexSettings.ts')) {
+  if (file.endsWith('/consts/hydro/settings.ts')) {
+    replace("forcedColorScheme: 'showdown',", "forcedColorScheme: 'pro',");
+  } else if (file.endsWith('/interfaces/app/ShowdexSettings.ts')) {
     replace("forcedColorScheme: 'showdown' | Showdown.ColorScheme;", "forcedColorScheme: 'showdown' | 'pro' | Showdown.ColorScheme;");
   } else if (file.endsWith('/utils/host/getColorScheme.ts')) {
     replace("switch (schemeFromPrefs) {", "switch (schemeFromPrefs) {\n    case 'pro': return 'dark';");

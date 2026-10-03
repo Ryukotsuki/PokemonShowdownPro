@@ -47,7 +47,7 @@ const addonWindows = new Set();
 let clientSession;
 let messageStatus=null;
 const battleMessages=new BattleMessages({send:payload=>client.webContents.executeJavaScript(`window.__showdownPro?.sendBattleMessage(${JSON.stringify(payload)})`),onStatus:status=>{messageStatus=status;publish();}});
-let showdexStatus = 'Loading…', clientStatus = 'Connecting…', theme = 'light';
+let showdexStatus = 'Loading…', clientStatus = 'Connecting…', theme = 'pro';
 let postMatchStatus = null, postMatchRoomId = null, postMatchStatusVersion = 0;
 let statisticsError = null, lifetimeRecord = { allTime: emptyRecord(), countedBattleIds: [] }, statisticsFile;
 const sessionRecord = emptyRecord();
@@ -191,6 +191,8 @@ ipcMain.handle('panel:replay', (event,url,copy) => {
 });
 ipcMain.on('client:receive', (event, data) => { if (trustedClient(event)) {battles.receive(data);if(!updatesIdle())addonUpdates?.cancel();} });
 ipcMain.on('client:sent', (event, room, command) => { if (trustedClient(event)) battles.sent(room, command); });
+// Preload requests local CSS before slow page resources finish loading.
+ipcMain.handle('client:theme-css', event => trustedClient(event) ? require('./client-theme-css.cjs') : null);
 ipcMain.on('client:theme', (event, value) => {
   if (trustedClient(event) && ['light', 'dark', 'pro'].includes(value) && theme !== value) {
     theme = value;
@@ -326,8 +328,8 @@ async function createWindow() {
   statisticsFile = path.join(app.getPath('userData'), 'battle-stats.json');
   lifetimeRecord = loadRecord(statisticsFile);
   clientSession = session.fromPartition(smoke ? 'persist:pro-smoke' : 'persist:showdown-pro');
-  if(verifyRelease)require('../scripts/audit-client.cjs').isolateAuditNetwork(clientSession);
-  if(smoke)await clientSession.clearStorageData({storages:['localstorage','cookies']});
+  if(verifyRelease || smoke && process.argv.includes('--startup-only'))require('../scripts/audit-client.cjs').isolateAuditNetwork(clientSession);
+  if(smoke)await clientSession.clearStorageData({storages:['localstorage','cookies',...(process.argv.includes('--startup-only')?['indexdb']:[])]});
   browserAddons=new BrowserAddons(root,clientSession,publish,{sourceRoot:addonUpdates.installed('addons',path.join(root,'vendor/browser-addons')),buildRoot:app.isPackaged?path.join(app.getPath('userData'),'browser-addons'):path.join(root,'build/browser-addons')});
   await browserAddons.apply(preferences.addons);
   if(browserAddons.errors.size&&addonUpdates.saved.current.addons){addonUpdates.rollback('addons','An extension could not load.');browserAddons.sourceRoot=addonUpdates.installed('addons',path.join(root,'vendor/browser-addons'));await browserAddons.apply(preferences.addons);}
@@ -377,7 +379,7 @@ async function createWindow() {
   client.webContents.on('focus', () => hubTooltip?.hide());
   layout();
   if ((!smoke && !verifyRelease) || process.argv.includes('--visible')) window.show();
-  const loading = client.webContents.loadURL(smoke ? CLIENT_URL+(process.argv.includes('--new-client') ? 'newclient' : 'oldclient') : CLIENT_URL).catch(() => {});
+  const loading = client.webContents.loadURL(smoke ? CLIENT_URL+(process.argv.includes('--new-client') || process.argv.includes('--startup-only') ? 'newclient' : 'oldclient') : CLIENT_URL+'newclient').catch(() => {});
   // Smoke checks wait for the bridge, not every third-party page resource.
   if (!smoke && !verifyRelease) await loading;
   if(verifyRelease) {
@@ -393,6 +395,10 @@ async function createWindow() {
       throw new Error('Smoke test timed out: ' + JSON.stringify(state()));
     };
     await waitFor(() => showdexStatus === 'Showdex loaded');
+    if(process.argv.includes('--startup-only')) {
+      await require('../scripts/audit-startup-defaults.cjs')({window,client,state,waitFor});
+      app.exit(0);return;
+    }
     if(process.argv.includes('--window-controls-only')) {
       await require('../scripts/audit-window-controls.cjs')({window,client,root,state,waitFor});
       app.exit(0);return;

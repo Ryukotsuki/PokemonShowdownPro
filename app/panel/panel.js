@@ -49,7 +49,7 @@ function render(state) {
   if(collapsed && $('hub-content').contains(document.activeElement)) $('sidebar-toggle').focus();
   updateHubTooltip();
   applyTab(state.ui?.tab || 'battle');
-  document.documentElement.dataset.theme = ['light', 'dark', 'pro'].includes(state.theme) ? state.theme : 'light';
+  document.documentElement.dataset.theme = ['light', 'dark', 'pro'].includes(state.theme) ? state.theme : 'pro';
   $('auto-start-timer').checked = !!state.settings?.autoStartTimer;
   $('save-winning-replays').checked = !!state.settings?.saveWinningReplays;
   $('save-losing-replays').checked = !!state.settings?.saveLosingReplays;

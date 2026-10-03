@@ -36,6 +36,8 @@ Builds also run on pushes to `main`/`master` and on pull requests. Each job runs
 
 Audit sessions block the site's advertising bootstrap and its trackers so unrelated advertising requests cannot stall client navigation. Each navigation has a 45-second limit and one retry; real client load failures and compatibility failures still fail verification. This applies only to test windows.
 
+Each platform also checks that Pro styling is available while a page resource is deliberately held open, including both clients, the new client's redirected root URL, and saved Light, Dark, and System selections. Packaged checks verify that a fresh profile opens the new client with Pro selected for Showdown, Showdex, and the Battle Hub. All checks run muted.
+
 ## Publish version 1.0.0
 
 1. Confirm `package.json` and `package-lock.json` both contain version `1.0.0`.

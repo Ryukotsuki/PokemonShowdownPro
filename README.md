@@ -31,7 +31,7 @@
 - **A collapsible Battle Hub.** Keep active matches, add-ons, messages, records, and replay links together. Collapse the panel when you want more space.
 - **Better battle review.** A redesigned Battle History dashboard with saved battles, win/loss badges, rating charts, filters, and Pokémon statistics.
 - **PokéPaste tools.** Preview shared teams, import them locally, and export available open team sheets.
-- **Both Showdown clients.** Supports the classic and new official interfaces, with your preferred theme and settings preserved.
+- **Both Showdown clients.** Opens the new official interface by default, with the classic client still available and your preferred theme and settings preserved.
 - **Automatic add-on updates.** Daily checks run between battles. Compatible updates apply on restart, with rollback if loading fails.
 
 ## Built-in add-ons
@@ -96,6 +96,8 @@ npm start
 The current launcher uses Node.js and npm. No local Showdown server is required.
 
 ### Choose your theme
+
+Pro is the default for Showdown, Showdex, and the Battle Hub on Windows, macOS, and Linux. Existing theme selections are preserved.
 
 - **Classic client:** Settings → Graphics → Theme → **Pro**
 - **New client:** Settings → Appearance → Theme → **Pro**
