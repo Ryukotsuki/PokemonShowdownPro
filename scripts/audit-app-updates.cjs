@@ -52,8 +52,24 @@ app.whenReady().then(async () => {
   clearTimeout(deadline);
   if (server) await new Promise(resolve => server.close(resolve));
   // Temp files are scoped to this audit; downloaded installers are inert fixtures.
-  assert.ok(path.resolve(directory).startsWith(path.resolve(os.tmpdir()) + path.sep));
-  try { fs.rmSync(directory, { recursive: true, force: true }); }
-  catch (error) { if (!['EPERM', 'EBUSY'].includes(error.code)) throw error; /* Chromium can retain its isolated profile lock until exit on Windows. */ }
+  assert.equal(path.dirname(path.resolve(directory)), path.resolve(os.tmpdir()));
+  let cleanupTimer;
+  try {
+    await Promise.race([
+      fs.promises.rm(directory, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }),
+      // Recursive retries can multiply across locked Chromium cache folders.
+      // Bound the whole cleanup so successful audits always exit promptly.
+      new Promise((_, reject) => { cleanupTimer = setTimeout(() => reject(Object.assign(new Error('Audit profile is still in use'), { code: 'EBUSY' })), 3000); }),
+    ]);
+  }
+  catch (error) {
+    // Chromium is still alive until app.exit() below. It can retain a profile
+    // lock or recreate cache files during deletion on any host, leaving the
+    // directory nonempty. A busy disposable profile must not change the result
+    // of the completed download/checksum assertions; CI reclaims its temp files.
+    if (!['EPERM', 'EBUSY', 'ENOTEMPTY'].includes(error.code)) throw error;
+    console.log('Audit checks passed; isolated Chromium profile cleanup deferred until process exit.');
+  }
+  finally { clearTimeout(cleanupTimer); }
   app.exit(0);
 }).catch(error => { console.error(error); app.exit(1); });
