@@ -12,7 +12,31 @@ const {zipFixture}=require('../tests/app-update-fixtures.cjs');
 const root=path.resolve(__dirname,'..'),platform=process.platform,arch=process.arch;
 let directory,server,parent;
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const deadline=setTimeout(()=>{console.error('Portable app update audit timed out');app.exit(1);},180000);
+// No visual rendering is exercised here; avoid unnecessary CI GPU initialization.
+app.disableHardwareAcceleration();
+const deadline=setTimeout(()=>{console.error('Portable app update audit timed out');app.exit(1);},300000);
+async function waitForResult(stage) {
+ const end=Date.now()+120000; // The helper itself allows 90 seconds for startup.
+ while(Date.now()<end) {
+  try{return JSON.parse(await fs.readFile(path.join(stage,'result.json'),'utf8'));}catch{}
+  await sleep(100);
+ }
+ throw new Error('Helper did not finish within its startup deadline');
+}
+async function saveDiagnostics() {
+ if(!directory)return;
+ const out=path.join(root,'test-results',`portable-update-verification-${platform}-${arch}`);await fs.mkdir(out,{recursive:true});
+ const base=path.join(directory,'profile/app-update-staging');
+ for(const item of await fs.readdir(base).catch(()=>[])) {
+  if(!item.startsWith('update-'))continue;
+  for(const name of ['result.json','install-error.log','startup.log']) {
+   const content=await fs.readFile(path.join(base,item,name),'utf8').catch(()=>null);
+   if(content!==null){await fs.writeFile(path.join(out,item+'-'+name),content);console.error(item+' '+name+':\n'+content.slice(-16000));}
+  }
+ }
+ const startup=await fs.readFile(path.join(directory,'profile/audit-startup.json'),'utf8').catch(()=>null);
+ if(startup!==null){await fs.writeFile(path.join(out,'audit-startup.json'),startup);console.error('Packaged fixture startup: '+startup);}
+}
 app.whenReady().then(async()=>{
  directory=await fs.mkdtemp(path.join(os.tmpdir(),'pro-portable-audit-'));
  const bundle=platform==='darwin',original=path.join(root,'dist',platform==='win32'?'win-unpacked':platform==='linux'?'linux-unpacked':arch==='arm64'?'mac-arm64/Pokemon Showdown Pro.app':'mac/Pokemon Showdown Pro.app');
@@ -22,7 +46,7 @@ app.whenReady().then(async()=>{
  const profile=path.join(directory,'profile');await fs.mkdir(profile);await fs.writeFile(path.join(profile,'preferences.json'),'saved audit profile');
  // These fixture apps create no windows, never connect to Showdown and mute
  // audio before any web contents could be created.
- const stub=`require(${JSON.stringify(path.join(root,'scripts/mute-test-audio.cjs'))});const {app}=require('electron');app.setPath('userData',${JSON.stringify(profile)});app.whenReady().then(async()=>{await require('./app/app-update-install.cjs').confirmAppUpdate(app);setTimeout(()=>app.quit(),1500);});`;
+ const stub=`require(${JSON.stringify(path.join(root,'scripts/mute-test-audio.cjs'))});const {app}=require('electron');process.on('uncaughtException',error=>{console.error(error);app.exit(1);});app.disableHardwareAcceleration();app.setPath('userData',${JSON.stringify(profile)});app.whenReady().then(async()=>{require('node:fs').writeFileSync(${JSON.stringify(path.join(profile,'audit-startup.json'))},JSON.stringify({version:app.getVersion(),execPath:process.execPath,args:process.argv}));await require('./app/app-update-install.cjs').confirmAppUpdate(app);setTimeout(()=>app.quit(),1500);}).catch(error=>{console.error(error);app.exit(1);});`;
  const pkg=JSON.parse(await fs.readFile(path.join(resources(target),'package.json'),'utf8'));pkg.main='audit-main.cjs';pkg.version='98.0.0';
  await fs.writeFile(path.join(resources(target),'package.json'),JSON.stringify(pkg));
  await fs.writeFile(path.join(resources(target),'audit-main.cjs'),stub);
@@ -58,12 +82,7 @@ app.whenReady().then(async()=>{
  await updates.check(true);assert.equal(updates.status,'ready',updates.message);
  assert.equal(JSON.parse(await fs.readFile(path.join(resources(target),'package.json'))).version,'98.0.0');
  await updates.action();assert.notEqual(updates.status,'error',updates.message);
- let result;
- for(let i=0;i<600;i++) {
-  try{result=JSON.parse(await fs.readFile(path.join(prepared.stage,'result.json'),'utf8'));break;}catch{}
-  await sleep(100);
- }
- if(!result)throw new Error('Helper did not finish: '+await fs.readFile(path.join(prepared.stage,'install-error.log'),'utf8').catch(()=>''));
+ let result=await waitForResult(prepared.stage);
  assert.equal(result.installed,true,JSON.stringify(result));
  assert.equal(JSON.parse(await fs.readFile(path.join(resources(target),'package.json'))).version,'99.0.0');
  assert.equal(JSON.parse(await fs.readFile(path.join(resources(result.backup),'package.json'))).version,'98.0.0');
@@ -80,8 +99,8 @@ app.whenReady().then(async()=>{
  await fs.writeFile(path.join(prepared.stage,'job.json'),JSON.stringify(prepared.job));
  for(const name of ['helper-ready','confirmed','result.json'])await fs.rm(path.join(prepared.stage,name),{force:true});
  await launchPortableInstaller(prepared);parent.kill();result=null;
- for(let i=0;i<600;i++){try{result=JSON.parse(await fs.readFile(path.join(prepared.stage,'result.json'),'utf8'));break;}catch{}await sleep(100);}
- assert.equal(result?.installed,false,'A candidate without startup confirmation must roll back');
+ result=await waitForResult(prepared.stage);
+ assert.equal(result.installed,false,'A candidate without startup confirmation must roll back');
  assert.equal(JSON.parse(await fs.readFile(path.join(resources(target),'package.json'))).version,'99.0.0');
  assert.equal(await fs.readFile(path.join(profile,'preferences.json'),'utf8'),'saved audit profile');
  await sleep(2000);
@@ -90,4 +109,4 @@ app.whenReady().then(async()=>{
  clearTimeout(deadline);parent?.kill();if(server)await new Promise(resolve=>server.close(resolve));
  if(directory){assert.equal(path.dirname(directory),path.resolve(os.tmpdir()));await fs.rm(directory,{recursive:true,force:true,maxRetries:10,retryDelay:200});}
  app.exit(0);
-}).catch(error=>{console.error(error);parent?.kill();app.exit(1);});
+}).catch(async error=>{console.error(error);await saveDiagnostics().catch(console.error);parent?.kill();app.exit(1);});

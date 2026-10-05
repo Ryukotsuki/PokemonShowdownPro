@@ -72,7 +72,7 @@ async function rename(from,to) {
   try{return await fs.rename(from,to);}catch(error){if(!['EPERM','EBUSY','EACCES'].includes(error.code)||attempt===49)throw error;await pause(200);}
  }
 }
-async function applyUpdate(job,{launch=launchApp,confirm=waitForConfirmation,move=rename}={}) {
+async function applyUpdate(job,{launch=(executable,args)=>launchApp(executable,args,{platform:job.platform,logFile:path.join(job.stage,'startup.log')}),confirm=waitForConfirmation,move=rename}={}) {
  const {target,source,platform,stage}=job;
  // Paths come from the staged job, but validate them again in the detached process.
  if(!['win32','linux','darwin'].includes(platform)||!path.isAbsolute(target)||!path.isAbsolute(stage)||!path.isAbsolute(source)||path.resolve(source)!==source||!source.startsWith(stage+path.sep)||installation(job.execPath,platform)!==target||(await fs.lstat(source)).isSymbolicLink())throw new Error('Invalid app update install paths');
@@ -121,18 +121,22 @@ async function applyUpdate(job,{launch=launchApp,confirm=waitForConfirmation,mov
   throw error;
  }
 }
-function launchApp(executable,args) {
- return new Promise((resolve,reject)=>{
+async function launchApp(executable,args,{platform=process.platform,logFile,spawnProcess=spawn}={}) {
+ // The Linux wrapper supplies flags before Chromium starts. Launching .bin
+ // directly bypasses it, including when restarting after a failed update.
+ const command=platform==='linux'?path.join(path.dirname(executable),'pokemon-showdown-pro'):executable;
+ const output=logFile?await fs.open(logFile,'a',0o600):null;
+ try {return await new Promise((resolve,reject)=>{
   const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;
-  const child=spawn(executable,args,{cwd:path.dirname(executable),env,detached:true,stdio:'ignore',windowsHide:true});
+  const child=spawnProcess(command,args,{cwd:path.dirname(executable),env,detached:true,stdio:output?['ignore',output.fd,output.fd]:'ignore',windowsHide:true});
   child.once('error',reject);child.once('spawn',()=>{child.unref();resolve(child);});
- });
+ });}finally{await output?.close();}
 }
 async function waitForConfirmation(job,child) {
  const end=Date.now()+90000;
  while(Date.now()<end) {
   try{if(await fs.readFile(path.join(job.stage,'confirmed'),'utf8')===job.token)return;}catch{}
-  if(child.exitCode!==null)throw new Error('The updated app could not start');
+  if(child.exitCode!==null||child.signalCode)throw new Error('The updated app could not start'+(child.signalCode?' ('+child.signalCode+')':' (exit '+child.exitCode+')'));
   await pause(200);
  }
  throw new Error('The updated app did not confirm startup');
@@ -146,7 +150,9 @@ async function confirmAppUpdate(app,execPath=process.execPath,args=process.argv)
   const stage=path.join(base,directory);
   try {
    const job=JSON.parse(await fs.readFile(path.join(stage,'job.json'),'utf8'));
-   if(job.token===token&&job.execPath===execPath&&job.version===app.getVersion())await fs.writeFile(path.join(stage,'confirmed'),token);
+   // macOS /var and /private/var (and other installation aliases) can name
+   // the same executable. Keep the identity check, using the actual file paths.
+   if(job.token===token&&job.version===app.getVersion()&&await fs.realpath(job.execPath)===await fs.realpath(execPath))await fs.writeFile(path.join(stage,'confirmed'),token);
   }catch{}
  }
 }
@@ -188,4 +194,4 @@ async function runJob(file) {
 if(require.main===module)runJob(path.resolve(process.argv[2])).catch(async error=>{
  console.error(error);try{await fs.writeFile(path.join(path.dirname(process.argv[2]),'install-error.log'),error.stack);}catch{}process.exitCode=1;
 });
-module.exports={installation,managedName,validatePackage,packageHash,waitForExit,applyUpdate,confirmAppUpdate,cleanupCompletedUpdates,runJob};
+module.exports={installation,managedName,validatePackage,packageHash,waitForExit,applyUpdate,launchApp,confirmAppUpdate,cleanupCompletedUpdates,runJob};

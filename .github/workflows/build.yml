@@ -114,7 +114,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Package-verification-${{ matrix.platform }}-${{ matrix.arch }}
-          path: test-results/package-verification-*/
+          path: |
+            test-results/package-verification-*/
+            test-results/portable-update-verification-*/
           if-no-files-found: ignore
           retention-days: 14
       - name: Generate checksums

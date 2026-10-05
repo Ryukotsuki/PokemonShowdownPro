@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os');
-const {applyUpdate,validatePackage,installation,confirmAppUpdate,packageHash,cleanupCompletedUpdates}=require('../app/app-update-install.cjs');
+const {applyUpdate,validatePackage,installation,launchApp,confirmAppUpdate,packageHash,cleanupCompletedUpdates}=require('../app/app-update-install.cjs');
 
 const {fixture}=require('./app-update-fixtures.cjs');
 test('portable replacement preserves unrelated files and profiles across Windows, Linux and macOS',async t=>{
@@ -53,6 +53,38 @@ test('startup confirmation requires the staged token, matching executable and in
  await assert.rejects(fs.access(path.join(f.stage,'confirmed')));
  await confirmAppUpdate(app,f.job.execPath,['--pro-update-confirm='+token]);
  assert.equal(await fs.readFile(path.join(f.stage,'confirmed'),'utf8'),token);
+});
+
+test('startup confirmation accepts the same executable through a directory alias but rejects a different file',async t=>{
+ const f=await fixture(t,'darwin'),token='c'.repeat(32),app={getPath:()=>path.join(f.directory,'profile'),getVersion:()=> '1.1.3'};
+ const alias=path.join(f.directory,'installed-alias');
+ await fs.symlink(f.job.target,alias,process.platform==='win32'?'junction':'dir');
+ const aliasedExec=path.join(alias,'Contents/MacOS/Pokemon Showdown Pro');
+ await fs.writeFile(path.join(f.stage,'job.json'),JSON.stringify({...f.job,execPath:aliasedExec,token}));
+ const differentExec=path.join(f.directory,'different-executable');await fs.copyFile(f.job.execPath,differentExec);
+ await confirmAppUpdate(app,differentExec,['--pro-update-confirm='+token]);
+ await assert.rejects(fs.access(path.join(f.stage,'confirmed')));
+ await confirmAppUpdate({...app,getVersion:()=> '1.1.2'},f.job.execPath,['--pro-update-confirm='+token]);
+ await assert.rejects(fs.access(path.join(f.stage,'confirmed')));
+ await confirmAppUpdate(app,f.job.execPath,['--pro-update-confirm='+token]);
+ assert.equal(await fs.readFile(path.join(f.stage,'confirmed'),'utf8'),token);
+});
+
+test('Linux update and rollback relaunches use the portable launcher and preserve the confirmation argument',async t=>{
+ for(const platform of ['linux','win32','darwin']) {
+  const f=await fixture(t,platform),calls=[],args=['--pro-update-confirm='+'d'.repeat(32)];
+  const spawnProcess=(...parameters)=>{calls.push(parameters);const child=new(require('node:events').EventEmitter)();child.unref=()=>{};queueMicrotask(()=>child.emit('spawn'));return child;};
+  const logFile=path.join(f.stage,'startup.log');
+  await launchApp(f.job.execPath,args,{platform,logFile,spawnProcess});
+  await launchApp(f.job.execPath,[],{platform,logFile,spawnProcess});
+  const command=platform==='linux'?path.join(f.job.target,'pokemon-showdown-pro'):f.job.execPath;
+  assert.equal(calls[0][0],command);assert.deepEqual(calls[0][1],args);
+  assert.equal(calls[1][0],command);assert.deepEqual(calls[1][1],[]);
+  assert.equal(calls[0][2].shell,undefined);assert.equal(calls[0][2].windowsHide,true);
+  assert.equal(calls[0][2].env.ELECTRON_RUN_AS_NODE,undefined);
+  assert.equal(calls[0][2].stdio[1],calls[0][2].stdio[2]);
+  await fs.access(logFile);
+ }
 });
 test('completed updates retain one backup and clean old payloads without touching pending updates or user files',async t=>{
  const f=await fixture(t),app={getPath:()=>path.join(f.directory,'profile')};
