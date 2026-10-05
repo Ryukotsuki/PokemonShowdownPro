@@ -130,9 +130,9 @@ All six add-ons are included and enabled initially. Choose your favorites in **B
 
 **Battle Hub → Add-ons → App updates** checks stable GitHub releases once a day between battles. Installed Windows builds and original Linux AppImages download updates and verify their checksums. Choose **Restart to update** when your battles finish; closing the app does not install an update automatically.
 
-Windows portable ZIPs, extracted Linux builds, and unsigned macOS builds offer **Download update** for your platform. Install that download to replace your app. Your profile and settings remain saved.
+Windows portable ZIPs, extracted Linux builds, and macOS builds also download and verify updates inside Pro. Choose **Restart to update** to replace the app in its existing location. Your saved profile stays in place, and Pro keeps a backup if replacement or startup fails. The app must be in a writable folder; on macOS, move it out of the DMG and into **Applications** before updating.
 
-App checks require a publicly accessible GitHub release. Until one is available, Pro keeps the installed version and explains that no public release can be accessed. Older builds without the updater need one manual upgrade to a build containing it.
+App checks require a publicly accessible stable GitHub release with its update metadata and checksums. Until one is available, Pro keeps the installed version. Portable and macOS releases through v1.1.2 need one manual upgrade to a build containing the in-app replacement updater; subsequent updates happen inside Pro.
 
 ### Add-on & Showdex Updates
 

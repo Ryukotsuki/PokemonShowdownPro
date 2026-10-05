@@ -69,9 +69,9 @@ function render(state) {
   $('auto-update-app').disabled=!appUpdate?.supported;
   $('app-update-status').textContent=appUpdate?.message||'App updates have not been checked yet.';
   $('check-app-updates').disabled=!appUpdate?.supported||!!appUpdate?.busy||appUpdate?.status==='ready';
-  $('app-update-action').hidden=!['ready','available'].includes(appUpdate?.status);
-  $('app-update-action').textContent=appUpdate?.status==='ready'?'Restart to update':'Download update';
-  $('app-update-action').disabled=appUpdate?.status==='ready'?!appUpdate.canRestart:!appUpdate?.canDownload;
+  $('app-update-action').hidden=appUpdate?.status!=='ready';
+  $('app-update-action').textContent='Restart to update';
+  $('app-update-action').disabled=!appUpdate?.canRestart;
   $('auto-update-addons').checked=state.settings?.autoUpdateAddons!==false;
   $('addon-update-status').textContent=state.addonUpdates?.message||'Updates have not been checked yet.';
   $('check-addon-updates').disabled=!!state.addonUpdates?.busy;

@@ -9,7 +9,7 @@ function crxZip(data) {
   if(!offset||offset>data.length-4||data.readUInt32LE(offset)!==0x04034b50)throw new Error('Invalid extension archive');
   return data.subarray(offset);
 }
-function validateZip(data) {
+function validateZip(data,maxUnpackedBytes=256*1024*1024) {
   let end=-1;
   for(let i=data.length-22;i>=Math.max(0,data.length-65557);i--)if(data.readUInt32LE(i)===0x06054b50&&i+22+data.readUInt16LE(i+20)===data.length){end=i;break;}
   if(end<0||data.readUInt16LE(end+4)||data.readUInt16LE(end+6))throw new Error('Invalid ZIP directory');
@@ -21,7 +21,7 @@ function validateZip(data) {
     const nameLength=data.readUInt16LE(offset+28),extraLength=data.readUInt16LE(offset+30),commentLength=data.readUInt16LE(offset+32);
     const name=data.toString('utf8',offset+46,offset+46+nameLength),mode=data.readUInt32LE(offset+38)>>>16;
     if(!name||name.startsWith('/')||name.includes('\\')||name.split('/').some(part=>part&&(/^(?:\.|\.\.)$/.test(part)||/[<>:"|?*\x00-\x1f]|[. ]$/.test(part)))||(mode&0xf000)===0xa000||data.readUInt16LE(offset+8)&1)throw new Error('Unsafe ZIP entry');
-    total+=data.readUInt32LE(offset+24);if(total>256*1024*1024)throw new Error('Update archive is too large');
+    total+=data.readUInt32LE(offset+24);if(total>maxUnpackedBytes)throw new Error('Update archive is too large');
     offset+=46+nameLength+extraLength+commentLength;
   }
   if(offset!==end)throw new Error('Invalid ZIP directory length');

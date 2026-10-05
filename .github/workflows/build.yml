@@ -94,6 +94,12 @@ jobs:
         run: npm run dist -- --${{ matrix.arch }}
       - name: Prepare app update metadata
         run: node scripts/prepare-update-metadata.cjs
+      - name: Verify in-app portable replacement
+        if: runner.os != 'Linux'
+        run: node node_modules/electron/cli.js scripts/audit-portable-updates.cjs
+      - name: Verify in-app portable replacement on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node node_modules/electron/cli.js scripts/audit-portable-updates.cjs --no-sandbox
       - name: Verify packaged app
         if: runner.os != 'Linux'
         run: npm run verify:package

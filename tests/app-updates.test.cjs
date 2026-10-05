@@ -20,21 +20,21 @@ function setup(t, overrides = {}) {
   let checks = 0, downloads = 0, installs = 0, idle = true, enabled = true, time = 200000000;
   native.checkForUpdates = async () => { checks++; return { updateInfo: { version: '1.1.0' } }; };
   native.downloadUpdate = async () => { downloads++; native.emit('download-progress', { percent: 45 }); native.emit('update-downloaded', { version: '1.1.0' }); };
-  native.quitAndInstall = (silent, restart) => { assert.equal(restart, true); installs++; };
+  native.quitAndInstall = (silent, restart) => { assert.equal(silent,true);assert.equal(restart, true); installs++; };
   const options = { app: { isPackaged: true, getPath: () => directory, getVersion: () => '1.0.0' },
     distribution: 'public', platform: 'win32', execPath: process.execPath, env: {}, exists: () => true,
     createUpdater: () => native, canInstall: () => idle, enabled: () => enabled, now: () => time, ...overrides };
   const updates = new AppUpdates(options);
   return { updates, native, options, idle: value => { idle = value; }, enabled: value => { enabled = value; }, time: value => { time = value; }, counts: () => ({ checks, downloads, installs }) };
 }
-test('only installed public Windows and persistent Linux AppImages use automatic installers', () => {
+test('public packaged clients use native installers or in-app portable replacement', () => {
   const base = { packaged: true, distribution: 'public', env: {}, platform: 'win32', execPath: process.execPath, exists: () => true };
   assert.equal(updateMode(base), 'automatic');
-  assert.equal(updateMode({ ...base, exists: () => false }), 'manual');
-  assert.equal(updateMode({ ...base, platform: 'darwin' }), 'manual');
-  assert.equal(updateMode({ ...base, platform: 'linux' }), 'manual');
+  assert.equal(updateMode({ ...base, exists: () => false }), 'portable');
+  assert.equal(updateMode({ ...base, platform: 'darwin' }), 'portable');
+  assert.equal(updateMode({ ...base, platform: 'linux' }), 'portable');
   assert.equal(updateMode({ ...base, platform: 'linux', env: { APPIMAGE: path.resolve('Pro.AppImage') } }), 'automatic');
-  assert.equal(updateMode({ ...base, platform: 'linux', env: { APPIMAGE: path.resolve('.mount_pro/Pro.AppImage') } }), 'manual');
+  assert.equal(updateMode({ ...base, platform: 'linux', env: { APPIMAGE: path.resolve('.mount_pro/Pro.AppImage') } }), 'portable');
   assert.equal(updateMode({ ...base, distribution: 'private' }), 'private');
   assert.equal(updateMode({ ...base, packaged: false }), 'development');
 });
@@ -125,19 +125,43 @@ test('private, development and audit instances never fetch or create an installe
     assert.notEqual(fixture.updates.status, 'error');
   }
 });
-test('unsigned macOS fallback selects the right architecture and opens only a verified project asset', async t => {
+test('portable updates download inside Pro, require checksums, and recheck battles before replacing the app', async t => {
+ for(const platform of ['win32','darwin','linux']) {
+  const arch='arm64',kind=platform==='darwin'?'macos':platform==='win32'?'windows':'linux',ext=platform==='darwin'?'dmg':platform==='win32'?'zip':'tar.gz';
+  const name=`PokemonShowdownPro-1.2.0-${kind}-${arch}.${ext}`,url=`https://github.com/Ryukotsuki/PokemonShowdownPro/releases/download/v1.2.0/${name}`;
+  const release={tag_name:'v1.2.0',assets:[{name,browser_download_url:url},{name:name+'.sha256',browser_download_url:url+'.sha256'}]};
+  let prepares=0,installs=0,quits=0;
+  const f=setup(t,{platform,arch,exists:()=>false,fetchRelease:async()=>release,
+   prepareUpdate:async download=>{assert.equal(download.url,url);assert.equal(download.checksumUrl,url+'.sha256');prepares++;return {stage:'fixture'};},
+   launchInstaller:async prepared=>{assert.equal(prepared.stage,'fixture');installs++;},
+   app:{isPackaged:true,getPath:()=>fixture(t),getVersion:()=> '1.0.0',quit:()=>quits++}});
+  await f.updates.check(true);assert.equal(f.updates.status,'ready');assert.equal(prepares,1);assert.equal(quits,0);
+  f.idle(false);await f.updates.action();assert.equal(installs,0);assert.equal(quits,0);
+  f.idle(true);await f.updates.action();assert.equal(installs,1);assert.equal(quits,1);
+  assert.throws(()=>releaseDownload({...release,assets:release.assets.slice(0,1)},'1.0.0',platform,arch),/verified download/);
+ }
+});
+test('unsigned macOS updates select the matching architecture and reject arbitrary asset URLs', async t => {
   const url = 'https://github.com/Ryukotsuki/PokemonShowdownPro/releases/download/v1.2.0/PokemonShowdownPro-1.2.0-macos-arm64.dmg';
-  const release = { tag_name: 'v1.2.0', assets: [{ name: 'PokemonShowdownPro-1.2.0-macos-arm64.dmg', browser_download_url: url }] };
-  const opened = [];
-  const fixture = setup(t, { platform: 'darwin', arch: 'arm64', fetchRelease: async () => release, openExternal: async url => opened.push(url) });
-  await fixture.updates.check(); assert.equal(fixture.updates.status, 'available'); assert.equal(fixture.updates.snapshot().canDownload, true);
-  await fixture.updates.action(); assert.deepEqual(opened, [url]); assert.equal(fixture.counts().downloads, 0);
+  const release = { tag_name: 'v1.2.0', assets: [{ name: 'PokemonShowdownPro-1.2.0-macos-arm64.dmg', browser_download_url: url },{name:'PokemonShowdownPro-1.2.0-macos-arm64.dmg.sha256',browser_download_url:url+'.sha256'}] };
+  const fixture = setup(t, { platform: 'darwin', arch: 'arm64', fetchRelease: async () => release, prepareUpdate:async()=>({stage:'fixture'}) });
+  await fixture.updates.check(); assert.equal(fixture.updates.status, 'ready'); assert.equal(fixture.updates.snapshot().canRestart, true);
   assert.throws(() => releaseDownload(release, '1.0.0', 'darwin', 'x64'), /compatible/);
   assert.throws(() => releaseDownload({ ...release, assets: [{ ...release.assets[0], browser_download_url: 'https://evil.example/app.dmg' }] }, '1.0.0', 'darwin', 'arm64'), /compatible/);
   assert.equal(releaseDownload({ ...release, prerelease: true }, '1.0.0', 'darwin', 'arm64'), null);
   assert.equal(newerVersion('1.0.0', '1.0.0'), false);
   assert.equal(newerVersion('0.9.0', '1.0.0'), false);
   assert.equal(newerVersion('1.3.0-beta', '1.0.0'), false);
+});
+test('portable download cancellation and helper launch failures never quit or install the app',async t=>{
+ const name='PokemonShowdownPro-1.2.0-windows-x64.zip',url=`https://github.com/Ryukotsuki/PokemonShowdownPro/releases/download/v1.2.0/${name}`;
+ const release={tag_name:'v1.2.0',assets:[{name,browser_download_url:url},{name:name+'.sha256',browser_download_url:url+'.sha256'}]};
+ let quits=0;
+ const options={exists:()=>false,arch:'x64',fetchRelease:async()=>release,app:{isPackaged:true,getPath:()=>fixture(t),getVersion:()=> '1.0.0',quit:()=>quits++}};
+ const stopped=setup(t,{...options,prepareUpdate:async(_download,_progress,signal)=>{stopped.updates.stop();signal.throwIfAborted();}});
+ await stopped.updates.check(true);await stopped.updates.action();assert.equal(quits,0);
+ const failed=setup(t,{...options,prepareUpdate:async()=>({stage:'fixture'}),launchInstaller:async()=>{throw new Error('Helper launch failed');}});
+ await failed.updates.check(true);await failed.updates.action();assert.equal(failed.updates.status,'error');assert.equal(quits,0);
 });
 test('release metadata merges both Mac architectures without losing downloads or checksums', t => {
   const directory = fixture(t);

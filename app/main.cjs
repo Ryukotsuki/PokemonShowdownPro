@@ -321,7 +321,7 @@ async function createWindow() {
   for (const obsolete of [previousFile, path.join(app.getPath('userData'), 'active-battles.json')]) fs.rmSync(obsolete, { force: true });
   if(smoke) {preferences.showdexEnabled=true;preferences.addons=Object.fromEntries(addonCatalog.map(addon=>[addon.key,false]));}
   appliedShowdex=preferences.showdexEnabled;
-  appUpdates=new AppUpdates({app,distribution:require('./update-distribution.cjs'),disabled:smoke || verifyRelease,enabled:()=>preferences.autoUpdateApp,canInstall:updatesIdle,openExternal:url=>shell.openExternal(url),onChange:publish});
+  appUpdates=new AppUpdates({app,distribution:require('./update-distribution.cjs'),disabled:smoke || verifyRelease,enabled:()=>preferences.autoUpdateApp,canInstall:updatesIdle,onChange:publish});
   const updateDirectory=smoke?path.join(root,'test-results/smoke-updates'):app.isPackaged?path.join(app.getPath('userData'),'addon-updates'):path.join(root,'build/addon-updates');
   addonUpdates=new AddonUpdates({directory:updateDirectory,prepare:smoke?async()=>({}):prepareUpdates(root,updateDirectory,{verifyBundled:verifyRelease}),canCheck:updatesIdle,onChange:publish});
   if(!smoke)addonUpdates.activatePending();
@@ -481,7 +481,7 @@ async function createWindow() {
 }
 // A second installed instance must not install an update while the first is battling.
 const primaryInstance = !app.isPackaged || smoke || verifyRelease || app.requestSingleInstanceLock();
-if (primaryInstance) app.whenReady().then(createWindow).catch(error => { console.error(error); app.exit(1); });
+if (primaryInstance) app.whenReady().then(createWindow).then(()=>require('./app-update-install.cjs').confirmAppUpdate(app)).catch(error => { console.error(error); app.exit(1); });
 else app.quit();
 app.on('second-instance', () => { if (window) { if (window.isMinimized()) window.restore(); window.show(); window.focus(); } });
 app.on('before-quit', () => { clearInterval(updateTimer);clearInterval(appUpdateTimer);appUpdates?.stop();addonUpdates?.stop(); closing = true; navigationVersion++; });
