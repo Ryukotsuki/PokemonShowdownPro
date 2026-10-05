@@ -15,6 +15,14 @@ app.whenReady().then(async()=>{
  await manager.apply(addonDefaults);
  assert.equal(manager.active.size,6);assert.equal(manager.errors.size,0);
  const win=new BrowserWindow({show:false,width:1100,height:800,webPreferences:{session:ses,offscreen:true,backgroundThrottling:false}}),wc=win.webContents,errors=[],report=[];
+ // Update validation checks behavior, styles and layout below. PNGs are only
+ // for the standalone visual audit: offscreen capture can fail on macOS CI
+ // after resizing even when those compatibility checks succeed.
+ const screenshot=async name=>{
+  if(stage)return;
+  await wc.capturePage();await pause(150);
+  fs.writeFileSync(path.join(out,name),(await wc.capturePage()).toPNG());
+ };
  const opened=[];wc.setWindowOpenHandler(({url})=>{opened.push(url);return {action:'deny'};});
  wc.on('console-message',details=>{if(details.level==='error'){errors.push(details.message);console.error(details.message.slice(0,500),details.sourceId,details.lineNumber);}else if(details.message.includes('Three Island'))console.log(details.message);});
  const evaluate=async code=>{try{return await wc.executeJavaScript('(()=>{'+code+'})()');}catch(error){throw new Error(code.slice(0,180)+': '+error.message);}};
@@ -55,8 +63,8 @@ app.whenReady().then(async()=>{
   }
   for(const nodeId of nodes)await wc.debugger.sendCommand('CSS.forcePseudoState',{nodeId,forcedPseudoClasses:[]});
   console.log(client+': history menu matches normal, hover, pressed and focus colors');
-  await evaluate("document.querySelector('.ps-stats-button').scrollIntoView({block:'center'});");await wc.capturePage();await pause(150);
-  fs.writeFileSync(path.join(out,client+'-history-menu-pro.png'),(await wc.capturePage()).toPNG());
+  await evaluate("document.querySelector('.ps-stats-button').scrollIntoView({block:'center'});");
+  await screenshot(client+'-history-menu-pro.png');
   await evaluate('document.querySelector(".ps-stats-button").click();');
   for(let i=0;i<30 && !opened.some(url=>url.includes('/stats.html'));i++)await pause(50);
   const historyUrl=opened.find(url=>url.includes('/stats.html'));assert.ok(historyUrl,client+' opens history');assert.equal(historyUrl,manager.optionsUrl('battleHistory'));opened.length=0;
@@ -112,7 +120,7 @@ app.whenReady().then(async()=>{
       await evaluate(`const room=${host}.rooms[${JSON.stringify(id)}],tips=room.tooltips||new BattleTooltips(room.battle);tips.placeTooltip(${JSON.stringify(teraTooltips[1].html)});`);
       const icon=await evaluate(`const heading=document.querySelector('#tooltipwrapper h2'),icon=[...heading.querySelectorAll('img')].find(img=>img.alt==='Poison'),r=icon.getBoundingClientRect(),h=heading.getBoundingClientRect();return {visible:icon.checkVisibility()&&r.width>0&&r.height>0,insideHeader:r.left>=h.left&&r.right<=h.right&&r.top>=h.top&&r.bottom<=h.bottom};`);
       assert.equal(icon.visible,true,client+'/'+theme+'/'+width+' Tera icon visible');assert.equal(icon.insideHeader,true,client+'/'+theme+'/'+width+' Tera icon fits header');
-      if(theme==='pro')fs.writeFileSync(path.join(out,client+'-tera-tooltip-'+width+'.png'),(await wc.capturePage()).toPNG());
+      if(theme==='pro')await screenshot(client+'-tera-tooltip-'+width+'.png');
       await evaluate('BattleTooltips.hideTooltip();');
     }
   }
@@ -145,7 +153,7 @@ app.whenReady().then(async()=>{
    await evaluate(`${host}.rooms[${JSON.stringify(id)}].update(null);`);await pause(200);
    assert.equal(await evaluate(`return document.getElementById('room-'+${JSON.stringify(id)}).querySelectorAll('button[name="exportPasteButton"]').length;`),1,'Exporter survives new client rerender');
   }
-  await wc.capturePage();await pause(150);fs.writeFileSync(path.join(out,client+'-exporter-pro.png'),(await wc.capturePage()).toPNG());
+  await screenshot(client+'-exporter-pro.png');
   await evaluate('document.querySelector("button[name=exportPasteButton]:not(:disabled)").click();');
   for(let i=0;i<30 && !opened.some(url=>url.startsWith('https://pokepast.es/create'));i++)await pause(100);
   const exported=opened.findLast(url=>url.startsWith('https://pokepast.es/create'));opened.length=0;
