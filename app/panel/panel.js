@@ -16,7 +16,7 @@ function messageCounts() {
   for(const phase of ['start','end']) $(phase+'-message-count').textContent=$(`${phase}-message-text`).value.length+' / 280';
 }
 function updateHubTooltip() {
-  const controls=[$('fullscreen-toggle'),$('sidebar-toggle')];
+  const controls=[$('fullscreen-toggle'),$('sidebar-toggle'),...document.querySelectorAll('.zoom-controls button')];
   const visible=control=>control.checkVisibility();
   const target=controls.find(control=>visible(control) && control.matches(':hover')) || controls.find(control=>visible(control) && control.matches(':focus-visible'));
   window.pro.showHubTooltip(!!target, target?.getBoundingClientRect().bottom, target?.id);
@@ -36,11 +36,21 @@ function showRecord(prefix, record = {}) {
 }
 function render(state) {
   if (!state) return;
+  for(const [prefix,key] of [['','clientZoomPercent'],['showdex-','showdexZoomPercent']]) {
+    const zoom=state.settings?.[key]||100;
+    $(prefix+'zoom-percent').textContent=zoom+'%';
+    $(prefix+'zoom-out').disabled=zoom<=50;
+    $(prefix+'zoom-in').disabled=zoom>=200;
+  }
   latestState=state;
   $('app-version').textContent=`v${state.appVersion}`;
   document.title='Pokémon Showdown Pro';
   const collapsed=!!state.ui?.collapsed;
   document.body.dataset.collapsed=String(collapsed);
+  const zoomContainer=document.querySelector(collapsed ? '.hub-controls' : '.hero');
+  for(const zoomControls of document.querySelectorAll('.zoom-controls')) {
+    if(zoomControls.parentElement!==zoomContainer) zoomContainer.append(zoomControls);
+  }
   $('fullscreen-toggle').setAttribute('aria-pressed',String(!!state.ui?.fullscreen));
   $('fullscreen-toggle').setAttribute('aria-label',state.ui?.fullscreen?'Exit fullscreen':'Enter fullscreen');
   $('hub-content').hidden=collapsed;
@@ -134,9 +144,14 @@ function render(state) {
   }
 }
 $('fullscreen-toggle').onclick=()=>hubAction(async()=>render(await window.pro.toggleFullscreen()));
+for(const [prefix,target] of [['','showdown'],['showdex-','showdex']]) {
+  for(const [id,action] of [['zoom-out','out'],['zoom-in','in'],['zoom-reset','reset']]) {
+    $(prefix+id).onclick=()=>hubAction(async()=>render(await window.pro.zoom(action,target)));
+  }
+}
 $('sidebar-toggle').onclick=()=>hubAction(async()=>render(await window.pro.setSetting('sidebarCollapsed',!latestState?.ui?.collapsed)));
-for (const id of ['fullscreen-toggle','sidebar-toggle']) {
-  for (const event of ['mouseenter','mouseleave','focus','blur']) $(id).addEventListener(event,updateHubTooltip);
+for (const control of [$('fullscreen-toggle'),$('sidebar-toggle'),...document.querySelectorAll('.zoom-controls button')]) {
+  for (const event of ['mouseenter','mouseleave','focus','blur']) control.addEventListener(event,updateHubTooltip);
 }
 window.addEventListener('blur',()=>window.pro.showHubTooltip(false));
 for(const button of document.querySelectorAll('[role="tab"]')) {

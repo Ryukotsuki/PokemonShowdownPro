@@ -36,7 +36,7 @@ const SIDEBAR_WIDTH = 360;
 const smoke = process.argv.includes('--smoke-test');
 const verifyRelease = process.argv.includes('--verify-release');
 if (smoke || verifyRelease) require('../scripts/mute-test-audio.cjs');
-if (smoke) app.setPath('userData', path.join(root, 'test-results/smoke-profile'));
+if (smoke) app.setPath('userData', process.env.SHOWDOWN_PRO_SMOKE_PROFILE || path.join(root, 'test-results/smoke-profile'));
 if (verifyRelease) app.setPath('userData', process.env.SHOWDOWN_PRO_VERIFY_PROFILE || path.join(require('node:os').tmpdir(),'showdown-pro-release-check'));
 protocol.registerSchemesAsPrivileged([{ scheme: 'showdown-pro', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 let window, client, hubTooltip, closing = false;
@@ -157,13 +157,33 @@ function toggleFullscreen() {
   if(window&&!window.isDestroyed()){hubTooltip?.hide();window.setFullScreen(!window.isFullScreen());publish();}
   return state();
 }
+let clientZoomTarget='showdown';
+function setClientZoom(action,target='showdown') {
+  if(!['showdown','showdex'].includes(target))throw new Error('Invalid zoom target.');
+  const key=target==='showdex'?'showdexZoomPercent':'clientZoomPercent';
+  const previous=preferences[key];
+  const next=require('./client-zoom.cjs').nextZoomPercent(previous,action);
+  if(next!==previous) {
+    preferences[key]=next;
+    try {savePreferences(preferencesFile,preferences);} catch(error) {preferences[key]=previous;throw error;}
+  }
+  if(client)require('./client-zoom.cjs').applyClientZoom(client.webContents,preferences);
+  publish();return state();
+}
+function shortcutZoom(action,target='showdown') {try {setClientZoom(action,target);} catch(error) {console.error('Zoom:',error.message);}}
 app.on('web-contents-created',(_event,contents)=>require('./window-shortcuts.cjs').installWindowShortcuts(contents,{
   toggleFullscreen,
+  zoom:action=>shortcutZoom(action,contents===client?.webContents?clientZoomTarget:'showdown'),
+  canZoom:()=>contents===window?.webContents||contents===client?.webContents,
   reload:()=>{if(client&&!client.webContents.isDestroyed())void reloadClient();},
   devTools:()=>client?.webContents.openDevTools({mode:'detach'}),
   quit:()=>app.quit(),
 }));
 ipcMain.handle('panel:fullscreen',event=>trustedPanel(event)?toggleFullscreen():null);
+ipcMain.handle('panel:zoom', (event,action,target)=>trustedPanel(event)?setClientZoom(action,target):null);
+ipcMain.handle('client:zoom-state',event=>trustedClient(event)?{clientZoomPercent:preferences.clientZoomPercent,showdexZoomPercent:preferences.showdexZoomPercent,css:require('./client-zoom.cjs').showdexZoomCSS}:null);
+ipcMain.on('client:zoom-target',(event,target)=>{if(trustedClient(event)&&['showdown','showdex'].includes(target))clientZoomTarget=target;});
+ipcMain.on('client:zoom', (event,action,target)=>{if(trustedClient(event)&&['in','out'].includes(action)&&['showdown','showdex'].includes(target))shortcutZoom(action,target);});
 ipcMain.handle('panel:check-app-updates', async event => {if(trustedPanel(event)){await appUpdates?.check(true);return state();}});
 ipcMain.handle('panel:app-update-action', async event => {if(trustedPanel(event)){await appUpdates?.action();return state();}});
 ipcMain.handle('panel:state', event => trustedPanel(event) ? state() : null);
@@ -181,8 +201,14 @@ ipcMain.on('panel:hub-tooltip', (event, visible, top, control) => {
   const labels={
     'sidebar-toggle':preferences.sidebarCollapsed ? 'Expand Battle Hub' : 'Collapse Battle Hub',
     'fullscreen-toggle':window?.isFullScreen() ? 'Exit fullscreen (F11)' : 'Enter fullscreen (F11)',
+    'zoom-out':'Zoom Showdown out',
+    'zoom-in':'Zoom Showdown in',
+    'zoom-reset':'Reset Showdown zoom to 100%',
+    'showdex-zoom-out':'Zoom Showdex out',
+    'showdex-zoom-in':'Zoom Showdex in',
+    'showdex-zoom-reset':'Reset Showdex zoom to 100%',
   };
-  if (visible === true && labels[control]) void hubTooltip.show({ collapsed:preferences.sidebarCollapsed, label:labels[control], theme, top }).catch(() => hubTooltip?.hide());
+  if (visible === true && labels[control]) void hubTooltip.show({ collapsed:preferences.sidebarCollapsed, label:labels[control], theme, top, outsideHub:control.includes('zoom-') }).catch(() => hubTooltip?.hide());
   else hubTooltip.hide();
 });
 ipcMain.handle('panel:focus', async (event,id) => {
@@ -318,8 +344,7 @@ async function createWindow() {
   session.defaultSession.protocol.handle('showdown-pro', assets);
   clientSession.protocol.handle('showdown-pro', assets);
   for (const ses of [session.defaultSession, clientSession]) {
-    ses.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
-    ses.setPermissionCheckHandler(() => false);
+    require('./client-permissions.cjs').installClientPermissions(ses, () => client?.webContents);
   }
   if (process.platform === 'darwin') app.dock.setIcon(nativeImage.createFromPath(appIcon));
   window = new BrowserWindow({ title: appTitle, icon: appIcon, width: 1580, height: 980, minWidth: 1080, minHeight: 650, show: false,
@@ -327,6 +352,8 @@ async function createWindow() {
   setProgramIdentity(window);
   if ((!smoke && !verifyRelease) || process.argv.includes('--visible')) window.show();
   client = new WebContentsView({ webPreferences: { session: clientSession, preload: path.join(__dirname, 'client-preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false } });
+  require('./client-zoom.cjs').bindClientZoom(client.webContents,()=>preferences.clientZoomPercent,()=>preferences.showdexZoomPercent);
+  client.webContents.on('did-start-navigation',(_event,_url,isInPlace,isMainFrame)=>{if(isMainFrame&&!isInPlace)clientZoomTarget='showdown';});
   if (smoke) client.webContents.on('console-message', details => {
     if (details.level === 'error') console.error('Client:', details.message);
   });
@@ -382,6 +409,7 @@ async function createWindow() {
     }
     if(process.argv.includes('--window-controls-only')) {
       await require('../scripts/audit-window-controls.cjs')({window,client,root,state,waitFor});
+      await require('../scripts/audit-zoom.cjs')({window,client,root,state,waitFor,hubTooltip});
       app.exit(0);return;
     }
     if (!process.argv.includes('--theme-audit') && !process.argv.includes('--theme-only')) {

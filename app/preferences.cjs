@@ -1,9 +1,10 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { addonDefaults } = require('./addon-catalog.cjs');
+const { validZoomPercent } = require('./client-zoom.cjs');
 const messageDefaults = { startEnabled: false, startText: '', endEnabled: false, endText: '' };
 const sidebarTabs = ['battle', 'addons', 'messages', 'history'];
-const defaults = { autoStartTimer: false, saveWinningReplays: false, saveLosingReplays: false, showdexEnabled: true, autoUpdateAddons: true, autoUpdateApp: true, recentReplays: [], sidebarCollapsed: false, sidebarTab: 'battle', messages: messageDefaults, addons: addonDefaults };
+const defaults = { autoStartTimer: false, saveWinningReplays: false, saveLosingReplays: false, showdexEnabled: true, autoUpdateAddons: true, autoUpdateApp: true, clientZoomPercent: 100, showdexZoomPercent: 100, recentReplays: [], sidebarCollapsed: false, sidebarTab: 'battle', messages: messageDefaults, addons: addonDefaults };
 const validMessageText = text => typeof text === 'string' && text.length <= 280 && !/[\x00-\x1f\x7f\u0085\u2028\u2029]/.test(text) && !text.trimStart().startsWith('/');
 const validMessages = value => value && ['start','end'].every(phase => typeof value[phase+'Enabled'] === 'boolean' && validMessageText(value[phase+'Text']) && (!value[phase+'Enabled'] || !!value[phase+'Text'].trim()));
 const shouldUploadReplay = (settings, outcome) => outcome === 'win' ? settings.saveWinningReplays === true : outcome === 'loss' ? settings.saveLosingReplays === true : false;
@@ -17,6 +18,8 @@ function normalize(saved = {}) {
     showdexEnabled: saved.showdexEnabled !== false,
     autoUpdateAddons: saved.autoUpdateAddons !== false,
     autoUpdateApp: saved.autoUpdateApp !== false,
+    clientZoomPercent: validZoomPercent(saved.clientZoomPercent) ? saved.clientZoomPercent : 100,
+    showdexZoomPercent: validZoomPercent(saved.showdexZoomPercent) ? saved.showdexZoomPercent : saved.showdexZoomPercent===undefined && validZoomPercent(saved.clientZoomPercent) ? saved.clientZoomPercent : 100,
     addons: Object.fromEntries(Object.entries(addonDefaults).map(([key,value]) => [key, typeof saved.addons?.[key] === 'boolean' ? saved.addons[key] : value])),
     recentReplays: Array.isArray(saved.recentReplays) ? saved.recentReplays.filter(item => replayUrl(item?.url) && typeof item.title === 'string').slice(0,20) : [],
     sidebarCollapsed: saved.sidebarCollapsed === true,

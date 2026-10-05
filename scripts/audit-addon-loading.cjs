@@ -80,6 +80,44 @@ app.whenReady().then(async()=>{
   fs.writeFileSync(path.join(out,client+'-tooltip.html'),tip);
   assert.match(tip,/Base [Ss]tats|Base [Ss]tat|BST/);assert.match(tip,/Setup Sweeper|Tera Blast user/);
   console.log(client+' tooltip:',tip.replace(/<[^>]+>/g,' ').slice(-650));
+  const teraTooltips=await evaluate(`const room=${host}.rooms[${JSON.stringify(id)}],battle=room.battle,tips=room.tooltips||new BattleTooltips(battle);
+    const own=battle.myPokemon[0],opponent=battle.farSide.pokemon[0];
+    const teraOpponent=Object.assign(Object.create(Object.getPrototypeOf(opponent)),opponent,{teraType:'Fire',terastallized:'Fire'});
+    const cases=[
+      ['own-active',battle.nearSide.pokemon[0],{...own,teraType:'Poison'},true],
+      ['own-switch',null,{...own,teraType:'Poison'},false],
+      ['own-stellar',null,{...own,teraType:'Stellar'},false],
+      ['own-terastallized',null,{...own,teraType:'Poison',terastallized:'Poison'},false],
+      ['opponent-unknown',opponent,null,true],
+      ['opponent-revealed',teraOpponent,null,true],
+    ];
+    return cases.map(([name,pokemon,server,active])=>{
+      const html=tips.showPokemonTooltip(pokemon,server,active),doc=new DOMParser().parseFromString(html,'text/html'),header=doc.querySelector('h2');
+      return {name,html,header:header.textContent,types:[...header.querySelectorAll('img')].filter(img=>img.src.includes('/types/')).map(img=>img.alt)};
+    });`);
+  for(const entry of teraTooltips) {
+    if(entry.name==='opponent-unknown')assert.doesNotMatch(entry.header,/Tera/,client+' hides unknown opponent Tera');
+    else if(entry.name.endsWith('terastallized') || entry.name==='opponent-revealed') {
+      assert.match(entry.header,/Terastallized/);assert.match(entry.header,/base:/);
+      assert.ok(entry.types.includes(entry.name==='opponent-revealed'?'Fire':'Poison'));
+    } else {
+      assert.match(entry.header,/Tera/);
+      assert.ok(entry.types.includes(entry.name==='own-stellar'?'Stellar':'Poison'),client+'/'+entry.name+' includes its known Tera icon');
+    }
+  }
+  for(const theme of ['light','dark','pro']) {
+    await evaluate(client==='old'?`OptionsPopup.prototype.setTheme({currentTarget:{value:${JSON.stringify(theme)}}});`:`PS.prefs.set('theme',${JSON.stringify(theme)});`);
+    for(const width of [1100,430]) {
+      win.setContentSize(width,800);await pause(200);
+      await evaluate(`const room=${host}.rooms[${JSON.stringify(id)}],tips=room.tooltips||new BattleTooltips(room.battle);tips.placeTooltip(${JSON.stringify(teraTooltips[1].html)});`);
+      const icon=await evaluate(`const heading=document.querySelector('#tooltipwrapper h2'),icon=[...heading.querySelectorAll('img')].find(img=>img.alt==='Poison'),r=icon.getBoundingClientRect(),h=heading.getBoundingClientRect();return {visible:icon.checkVisibility()&&r.width>0&&r.height>0,insideHeader:r.left>=h.left&&r.right<=h.right&&r.top>=h.top&&r.bottom<=h.bottom};`);
+      assert.equal(icon.visible,true,client+'/'+theme+'/'+width+' Tera icon visible');assert.equal(icon.insideHeader,true,client+'/'+theme+'/'+width+' Tera icon fits header');
+      if(theme==='pro')fs.writeFileSync(path.join(out,client+'-tera-tooltip-'+width+'.png'),(await wc.capturePage()).toPNG());
+      await evaluate('BattleTooltips.hideTooltip();');
+    }
+  }
+  fs.writeFileSync(path.join(out,client+'-tera-tooltips.json'),JSON.stringify(teraTooltips,null,2));
+  win.setContentSize(1100,800);await pause(150);
   await evaluate(`${host}.receive(${JSON.stringify('>'+id+'\n|c| Other|https://pokepast.es/addonaudit0001')});`);
   await pause(500);fs.writeFileSync(path.join(out,client+'-chat.html'),await evaluate(`return document.getElementById('room-'+${JSON.stringify(id)}).outerHTML;`));
   await waitFor('document.querySelector(".threeisland-link .threeisland-set")');

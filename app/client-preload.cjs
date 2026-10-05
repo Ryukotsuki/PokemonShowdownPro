@@ -8,6 +8,36 @@ contextBridge.exposeInMainWorld('showdownProEvents', Object.freeze({
 // Seed the shared preference before either client reads it, then paint Pro
 // without waiting for executeJavaScript's page-load gate or a socket connection.
 if (location.origin === 'https://play.pokemonshowdown.com' && window.top === window) {
+  let zoomState;
+  const applyZoom = value => {
+    if(value)zoomState=value;
+    if(!zoomState || !document.documentElement)return;
+    // Compensate for page zoom so Showdex keeps its own absolute percentage.
+    document.documentElement.style.setProperty('--showdown-pro-showdex-zoom',String(zoomState.showdexZoomPercent/zoomState.clientZoomPercent));
+    window.dispatchEvent(new Event('resize'));
+  };
+  ipcRenderer.on('client:zoom-state',(_event,value)=>applyZoom(value));
+  ipcRenderer.invoke('client:zoom-state').then(value=>{
+    if(!value)return;
+    webFrame.insertCSS(value.css,{cssOrigin:'user'});
+    // A load notification may already contain a newer setting.
+    applyZoom(zoomState||value);
+  }).catch(error=>console.error('Client zoom:',error.message));
+  const zoomObserver=new MutationObserver(()=>{
+    if(document.documentElement){applyZoom();zoomObserver.disconnect();}
+  });
+  zoomObserver.observe(document,{childList:true,subtree:true});
+  const zoomTarget = event => event.target?.closest?.('[data-showdex-module], [class*="Tooltip-module-container-"]') ? 'showdex' : 'showdown';
+  for(const type of ['pointerdown','focusin'])window.addEventListener(type,event=>{
+    if(event.isTrusted)ipcRenderer.send('client:zoom-target',zoomTarget(event));
+  },{capture:true});
+  // Handle only real Ctrl+wheel input in this isolated preload. Cancel native
+  // wheel zoom so it cannot drift away from Pro's saved percentage.
+  window.addEventListener('wheel',event=>{
+    if(!event.isTrusted || !event.ctrlKey || !event.deltaY)return;
+    event.preventDefault();
+    ipcRenderer.send('client:zoom',event.deltaY<0?'in':'out',zoomTarget(event));
+  },{capture:true,passive:false});
   let choice = 'pro';
   try {
     const value = JSON.parse(localStorage.getItem('showdown_prefs') || '{}');

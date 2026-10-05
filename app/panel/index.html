@@ -18,6 +18,18 @@
       <header class="hero">
         <div class="brand"><span class="brand-mark" aria-hidden="true"><img src="showdown-pro://assets/icons/icon.png" alt="" width="42" height="42"></span><div><span class="eyebrow">POKÉMON SHOWDOWN PRO</span><h1>Battle Hub <span id="app-version" class="app-version"></span></h1></div></div>
         <div class="connection"><span class="connection-dot" aria-hidden="true"></span><span id="client-status">Connecting to Showdown…</span></div>
+        <div class="zoom-controls" role="group" aria-label="Showdown zoom">
+          <span class="zoom-label"><span class="zoom-name">Showdown</span><span class="zoom-short" aria-hidden="true">SD</span></span>
+          <button id="zoom-out" type="button" aria-label="Zoom Showdown out">−</button>
+          <button id="zoom-reset" class="zoom-reset" type="button" aria-label="Reset Showdown zoom to 100%"><span id="zoom-percent" aria-live="polite">100%</span></button>
+          <button id="zoom-in" type="button" aria-label="Zoom Showdown in">+</button>
+        </div>
+        <div class="zoom-controls" role="group" aria-label="Showdex zoom">
+          <span class="zoom-label"><span class="zoom-name">Showdex</span><span class="zoom-short" aria-hidden="true">DX</span></span>
+          <button id="showdex-zoom-out" type="button" aria-label="Zoom Showdex out">−</button>
+          <button id="showdex-zoom-reset" class="zoom-reset" type="button" aria-label="Reset Showdex zoom to 100%"><span id="showdex-zoom-percent" aria-live="polite">100%</span></button>
+          <button id="showdex-zoom-in" type="button" aria-label="Zoom Showdex in">+</button>
+        </div>
       </header>
       <nav class="hub-tabs" role="tablist" aria-label="Battle Hub sections">
         <button id="tab-battle" type="button" role="tab" aria-selected="true" aria-controls="page-battle" data-tab="battle">Battle</button>

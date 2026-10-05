@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('pro', {
   setSetting: (key, value) => ipcRenderer.invoke('panel:setting', key, value),
   reload: () => ipcRenderer.invoke('panel:reload'),
   toggleFullscreen: () => ipcRenderer.invoke('panel:fullscreen'),
+  zoom: (action,target='showdown') => ipcRenderer.invoke('panel:zoom',action,target),
   checkAppUpdates: () => ipcRenderer.invoke('panel:check-app-updates'),
   appUpdateAction: () => ipcRenderer.invoke('panel:app-update-action'),
   checkUpdates: () => ipcRenderer.invoke('panel:check-updates'),

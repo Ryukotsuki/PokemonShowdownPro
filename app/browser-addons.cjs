@@ -60,7 +60,29 @@ class BrowserAddons {
       fs.writeFileSync(background,code.slice(code.indexOf('chrome.runtime.onMessage.addListener')));
       manifest.options_ui={page:'pro-settings.html',open_in_tab:true};
       const tooltip=path.join(target,'js/showPokemonTooltip.js');
-      const original=fs.readFileSync(tooltip,'utf8'),start=original.indexOf('ShowdownEnhancedTooltip.getStatbarHTML = function'),end=original.indexOf('ShowdownEnhancedTooltip.showPokemonTooltip = function',start);
+      let original=fs.readFileSync(tooltip,'utf8').replace(/\r\n/g,'\n');
+      const typeStart=original.indexOf('    let types = this.getPokemonTypes(pokemon);'),typeEnd=original.indexOf('    // ***********\n    // Show base stats',typeStart);
+      if(typeStart<0 || typeEnd<0)throw new Error('Enhanced Tooltips has an unsupported Pokémon type renderer.');
+      // Match the native client's known Tera/base-type header. The extension's
+      // older renderer omits the private Tera type supplied with team data.
+      original=original.slice(0,typeStart)+`    const types = serverPokemon?.terastallized ? [serverPokemon.teraType] : this.getPokemonTypes(pokemon);
+    const knownPokemon = serverPokemon || clientPokemon;
+    if (pokemon.terastallized) {
+      text += '<small>(Terastallized)</small><br />';
+    } else if (clientPokemon && (clientPokemon.volatiles.typechange || clientPokemon.volatiles.typeadd)) {
+      text += '<small>(Type changed)</small><br />';
+    }
+    text += '<span class="textaligned-typeicons">' + types.map(type => Dex.getTypeIcon(type)).join(' ') + '</span>';
+    if (pokemon.terastallized) {
+      text += '&nbsp; &nbsp; <small>(base: <span class="textaligned-typeicons">' + this.getPokemonTypes(pokemon, true).map(type => Dex.getTypeIcon(type)).join(' ') + '</span>)</small>';
+    } else if (knownPokemon.teraType) {
+      text += '&nbsp; &nbsp; <small>(Tera <span class="textaligned-typeicons">' + Dex.getTypeIcon(knownPokemon.teraType) + '</span>)</small>';
+    }
+
+`+original.slice(typeEnd);
+      original=original.replace('  var types = this.getPokemonTypes(pokemon);',
+        "  var types = serverPokemon?.terastallized && serverPokemon.teraType !== 'Stellar' ? [serverPokemon.teraType] : this.getPokemonTypes(pokemon);");
+      const start=original.indexOf('ShowdownEnhancedTooltip.getStatbarHTML = function'),end=original.indexOf('ShowdownEnhancedTooltip.showPokemonTooltip = function',start);
       if(start<0 || end<0)throw new Error('Enhanced Tooltips has an unsupported HP bar renderer.');
       // Keep the native front/back and slot classes, badges and Tera icon.
       // The add-on only needs to make the already-rendered name clickable.

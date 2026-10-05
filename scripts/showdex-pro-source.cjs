@@ -28,7 +28,7 @@ function transform(source, file) {
     replace('label: t(`showdex.forcedColorScheme.options.${option}.label`),', "label: option === 'pro' ? 'Pro' : t(`showdex.forcedColorScheme.options.${option}.label`),");
     replace('i18nKey={`showdex.forcedColorScheme.options.${option}.tooltip`}', 'i18nKey={`showdex.forcedColorScheme.options.${option}.tooltip`}\n                defaults={option === \'pro\' ? \'The blue Pokémon Showdown Pro theme.\' : undefined}');
   }
-  return source;
+  return require('./showdex-battle-controls.cjs').transform(source, file);
 }
 module.exports=function(source){return transform(source.replace(/\r\n/g,'\n'),this.resourcePath.replace(/\\/g,'/'));};
 module.exports.transform=transform;

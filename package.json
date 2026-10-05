@@ -14,6 +14,8 @@
     "download:addons": "node scripts/download-addons.cjs",
     "audit:addons": "node node_modules/electron/cli.js scripts/audit-addon-loading.cjs",
     "audit:hp-bars": "node node_modules/electron/cli.js scripts/audit-hp-bars.cjs",
+    "audit:calcdex-controls": "node node_modules/electron/cli.js scripts/audit-calcdex-controls.cjs",
+    "audit:showdex-settings": "node node_modules/electron/cli.js scripts/audit-showdex-settings.cjs",
     "audit:paste-previews": "node node_modules/electron/cli.js scripts/audit-paste-previews.cjs",
     "audit:history": "node node_modules/electron/cli.js scripts/audit-history.cjs",
     "audit:import-editor": "node node_modules/electron/cli.js scripts/audit-import-editor.cjs",
