@@ -9,12 +9,22 @@ const {AppUpdates,launchPortableInstaller}=require('../app/app-updates.cjs');
 const {prepareAppUpdate}=require('../app/app-update-package.cjs');
 const {packageHash}=require('../app/app-update-install.cjs');
 const {zipFixture}=require('../tests/app-update-fixtures.cjs');
+const {verifySignature}=require('./verify-macos-package.cjs');
 const root=path.resolve(__dirname,'..'),platform=process.platform,arch=process.arch;
 let directory,server,parent;
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 // No visual rendering is exercised here; avoid unnecessary CI GPU initialization.
 app.disableHardwareAcceleration();
 const deadline=setTimeout(()=>{console.error('Portable app update audit timed out');app.exit(1);},300000);
+async function sealFixture(bundle) {
+ if(platform!=='darwin')return;
+ // This audit changes package.json and scripts in disposable copies. Re-seal
+ // those copies after each edit, without modifying the real release artifacts.
+ await require('@electron/osx-sign').signAsync({app:bundle,identity:'-',identityValidation:false,platform:'darwin',
+  version:require('electron/package.json').version,preAutoEntitlements:false,
+  optionsForFile:()=>({hardenedRuntime:false,entitlements:require.resolve('app-builder-lib/templates/entitlements.mac.plist')})});
+ await verifySignature(bundle);
+}
 async function waitForResult(stage) {
  const end=Date.now()+120000; // The helper itself allows 90 seconds for startup.
  while(Date.now()<end) {
@@ -51,7 +61,9 @@ app.whenReady().then(async()=>{
  await fs.writeFile(path.join(resources(target),'package.json'),JSON.stringify(pkg));
  await fs.writeFile(path.join(resources(target),'audit-main.cjs'),stub);
  await fs.copyFile(path.join(root,'app/app-update-install.cjs'),path.join(resources(target),'app/app-update-install.cjs'));
+ await sealFixture(target);
  await fs.cp(target,source,{recursive:true,verbatimSymlinks:true});pkg.version='99.0.0';await fs.writeFile(path.join(resources(source),'package.json'),JSON.stringify(pkg));
+ await sealFixture(source);
  const name=`PokemonShowdownPro-99.0.0-${bundle?'macos':platform==='win32'?'windows':'linux'}-${arch}.${bundle?'dmg':platform==='win32'?'zip':'tar.gz'}`,archive=path.join(directory,name);
  if(platform==='win32')await zipFixture(source,archive);
  else if(platform==='linux')await require('tar').c({file:archive,gzip:true,cwd:source},['.']);
@@ -93,6 +105,7 @@ app.whenReady().then(async()=>{
  const sourcePackage=path.join(resources(prepared.job.source),'package.json');
  const failedPkg=JSON.parse(await fs.readFile(sourcePackage));failedPkg.version='100.0.0';await fs.writeFile(sourcePackage,JSON.stringify(failedPkg));
  await fs.writeFile(path.join(resources(prepared.job.source),'audit-main.cjs'),`require(${JSON.stringify(path.join(root,'scripts/mute-test-audio.cjs'))});require('electron').app.exit(2);`);
+ await sealFixture(prepared.job.source);
  parent=spawn(runtime,['-e','setInterval(()=>{},1000)'],{windowsHide:true,stdio:'ignore'});
  await new Promise((resolve,reject)=>{parent.once('spawn',resolve);parent.once('error',reject);});
  prepared.job.version='100.0.0';prepared.job.parentPid=parent.pid;prepared.job.packageHash=await packageHash(prepared.job.source);

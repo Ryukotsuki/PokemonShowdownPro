@@ -45,7 +45,13 @@ publish:
 mac:
   icon: app/assets/icons/icon.icns
   category: public.app-category.games
-  identity: null
+  # Seal the finished bundle without requiring a Developer ID certificate.
+  # Hardened runtime library validation is incompatible with this ad-hoc identity.
+  identity: '-'
+  hardenedRuntime: false
+  notarize: false
+  binaries:
+    - Contents/Resources/app/build/update-runtime/node
   target: [dmg, zip]
   artifactName: PokemonShowdownPro-${version}-macos-${arch}.${ext}
 dmg:

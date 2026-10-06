@@ -146,7 +146,7 @@ Verified updates apply when you restart Pro. Failed checks keep the installed ve
 
 - 🌐 **Live service:** Pro connects to the official Pokémon Showdown service. Sign-in, battles, and online features need internet access.
 - 📂 **Portable setup:** Keep the entire extracted folder together; the executable needs its accompanying resources.
-- 🍎 **macOS builds:** Releases are currently unsigned. Choose **x64** for Intel Macs or **arm64** for Apple Silicon.
+- 🍎 **macOS builds:** From v1.1.4, releases use an ad-hoc signature to preserve bundle integrity. They are not Apple-notarized, so macOS may still require approval in Privacy & Security. Choose **x64** for Intel Macs or **arm64** for Apple Silicon.
 - 🐧 **Linux shortcuts:** The first successful launch creates an application-menu entry and a desktop shortcut where supported. If prompted, choose **Allow Launching**. Manually edited shortcuts are preserved.
 - 💬 **Optional actions:** Automatic match messages and replay uploads are controlled by your Battle Hub settings.
 - 🛡️ **Troubleshooting:** Report your OS, app version, package type, and the error you saw when opening an issue.

@@ -92,6 +92,9 @@ jobs:
         run: xvfb-run -a node node_modules/electron/cli.js scripts/audit-app-updates.cjs --no-sandbox
       - name: Package apps
         run: npm run dist -- --${{ matrix.arch }}
+      - name: Verify macOS signatures in both download formats
+        if: runner.os == 'macOS'
+        run: node scripts/verify-macos-package.cjs
       - name: Prepare app update metadata
         run: node scripts/prepare-update-metadata.cjs
       - name: Verify in-app portable replacement
