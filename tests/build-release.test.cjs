@@ -36,3 +36,10 @@ test('DMG excludes indexing before copying the app and retains the Applications 
   assert.deepEqual(config.dmg.contents[1], { x: 130, y: 220, type: 'file' });
   assert.equal(config.dmg.contents[2].path, '/Applications');
 });
+test('Linux release packaging finalizes AppImage updates and preserves a finalization failure',async()=>{
+ const roots=[];
+ await buildRelease(['--x64'],{platform:'linux',root:'/project',run:async()=>({code:0}),finalizeLinux:async options=>roots.push(options.root)});
+ assert.deepEqual(roots,['/project']);
+ await assert.rejects(buildRelease(['--x64'],{platform:'linux',run:async()=>({code:0}),finalizeLinux:async()=>{throw new Error('Invalid zsync');}}),/Invalid zsync/);
+ await buildRelease(['--dir'],{platform:'linux',run:async()=>({code:0}),finalizeLinux:async()=>{throw new Error('Unpacked builds do not have an AppImage');}});
+});

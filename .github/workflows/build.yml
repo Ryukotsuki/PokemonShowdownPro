@@ -96,6 +96,11 @@ jobs:
       - name: Verify app updater downloads on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a node node_modules/electron/cli.js scripts/audit-app-updates.cjs --no-sandbox
+      - name: Install Linux packaging verification tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsync binutils desktop-file-utils
       - name: Package apps
         run: npm run dist -- --${{ matrix.arch }}
       - name: Verify macOS signatures in both download formats
@@ -103,6 +108,9 @@ jobs:
         run: node scripts/verify-macos-package.cjs
       - name: Prepare app update metadata
         run: node scripts/prepare-update-metadata.cjs
+      - name: Verify AppImage runtime, external updates and glibc requirements
+        if: runner.os == 'Linux'
+        run: node scripts/verify-appimage.cjs
       - name: Verify in-app portable replacement
         if: runner.os != 'Linux'
         run: node node_modules/electron/cli.js scripts/audit-portable-updates.cjs
@@ -114,10 +122,7 @@ jobs:
         run: npm run verify:package
       - name: Verify packaged app on Linux
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y desktop-file-utils
-          xvfb-run -a npm run verify:package
+        run: xvfb-run -a npm run verify:package
       - name: Upload package verification diagnostics
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -144,6 +149,8 @@ jobs:
             dist/*.blockmap
             dist/latest*.yml
             dist/update-mac-*.json
+            dist/*.AppImage.zsync
+            dist/linux-compatibility.json
           if-no-files-found: error
           retention-days: 14
           compression-level: 0

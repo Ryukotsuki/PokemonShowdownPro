@@ -70,6 +70,10 @@ Download the latest build from the [Releases page](https://github.com/Ryukotsuki
 
 Release downloads include the app and its tools. You do not need to install Node.js, npm, or a local Showdown server to use them.
 
+From v1.1.6, AppImages use a static launcher runtime that does not require system `libfuse2`. Normal mounting still needs working FUSE support; if mounting is unavailable, launch with `--appimage-extract-and-run`, or use the `.tar.gz` download. Electron and the bundled Node runtime still require compatible system libraries, including glibc. Each Linux release includes `linux-compatibility.json`, which records the highest required glibc version and the requirement for each bundled binary. This does not make the app compatible with every Linux distribution.
+
+AppImages also include external AppImageUpdate metadata, with a matching `.AppImage.zsync` release asset. Pro's built-in updater remains available.
+
 ### ⚡ Quick Start
 
 1. Open **Pokémon Showdown Pro**.
@@ -157,7 +161,7 @@ Verified updates apply when you restart Pro. Failed checks keep the installed ve
 Run your AppImage with `--install-shortcuts`, or use the executable inside an extracted release:
 
 ```sh
-./PokemonShowdownPro-1.0.0-linux-x64.AppImage --install-shortcuts
+./PokemonShowdownPro-1.1.6-x86_64.AppImage --install-shortcuts
 # For an extracted .tar.gz release:
 ./pokemon-showdown-pro --install-shortcuts
 ```

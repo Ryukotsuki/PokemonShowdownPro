@@ -2,6 +2,9 @@ appId: com.pokemonshowdownpro.desktop
 productName: Pokemon Showdown Pro
 asar: false
 npmRebuild: false
+toolsets:
+  # Static AppImage runtime; no system libfuse2 is needed by the launcher.
+  appimage: '1.0.3'
 afterPack: scripts/after-pack.cjs
 directories:
   output: dist
@@ -80,3 +83,5 @@ linux:
       StartupNotify: 'true'
   target: [AppImage, tar.gz]
   artifactName: PokemonShowdownPro-${version}-linux-${arch}.${ext}
+appImage:
+  artifactName: PokemonShowdownPro-${version}-${arch}.${ext}

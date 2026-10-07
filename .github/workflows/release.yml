@@ -123,6 +123,6 @@ jobs:
           # Publish downloads before update manifests so clients never see a
           # manifest whose installer has not finished uploading.
           shopt -s nullglob
-          packages=(release-files/*.exe release-files/*.zip release-files/*.dmg release-files/*.AppImage release-files/*.tar.gz release-files/*.sha256 release-files/*.blockmap)
+          packages=(release-files/*.exe release-files/*.zip release-files/*.dmg release-files/*.AppImage release-files/*.tar.gz release-files/*.sha256 release-files/*.blockmap release-files/*.AppImage.zsync release-files/linux-compatibility.json)
           gh release upload "$RELEASE_TAG" "${packages[@]}" --clobber
           gh release upload "$RELEASE_TAG" release-files/latest.yml release-files/latest-linux.yml release-files/latest-mac.yml --clobber

@@ -21,10 +21,14 @@ function runBuilder(args, { root, env }) {
   });
 }
 async function buildRelease(args, { platform = process.platform, root = path.resolve(__dirname, '..'), env = process.env,
-  run = runBuilder, wait = ms => new Promise(resolve => setTimeout(resolve, ms)), log = console.warn } = {}) {
+  run = runBuilder, wait = ms => new Promise(resolve => setTimeout(resolve, ms)), log = console.warn,
+  finalizeLinux = options => require('./appimage-release.cjs').prepareAppImage(options) } = {}) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     const result = await run(args, { root, env });
-    if (result.code === 0) return;
+    if (result.code === 0) {
+      if (platform === 'linux' && !args.some(arg => ['--win','--mac','--dir'].includes(arg))) await finalizeLinux({root});
+      return;
+    }
     if (platform !== 'darwin' || result.signal || !busyDmgDetach(result.output) || attempt === 3) {
       const error = new Error(`App packaging failed${result.signal ? ' with signal ' + result.signal : ' with exit code ' + result.code}`);
       error.exitCode = result.code || 1;

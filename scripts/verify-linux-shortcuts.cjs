@@ -8,8 +8,9 @@ const {desktopEntry, execQuote} = require('../app/linux-integration.cjs');
 module.exports = async function verifyLinuxShortcuts(dist) {
   if (process.platform !== 'linux') return;
   const files = await fs.readdir(dist);
-  const tar = files.find(file => file.endsWith(`-linux-${process.arch}.tar.gz`));
-  const image = files.find(file => file.endsWith(`-linux-${process.arch === 'x64' ? 'x86_64' : process.arch}.AppImage`));
+  const version = require('../package.json').version;
+  const tar = files.find(file => file === `PokemonShowdownPro-${version}-linux-${process.arch}.tar.gz`);
+  const image = files.find(file => file === `PokemonShowdownPro-${version}-${process.arch === 'x64' ? 'x86_64' : 'aarch64'}.AppImage`);
   assert.ok(tar && image, 'Both Linux release formats must exist before shortcut verification');
   const scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'ps-linux-release-'));
   try {
