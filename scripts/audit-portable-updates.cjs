@@ -9,21 +9,23 @@ const {AppUpdates,launchPortableInstaller}=require('../app/app-updates.cjs');
 const {prepareAppUpdate}=require('../app/app-update-package.cjs');
 const {packageHash}=require('../app/app-update-install.cjs');
 const {zipFixture}=require('../tests/app-update-fixtures.cjs');
-const {verifySignature}=require('./verify-macos-package.cjs');
+const {sealFixtureBundle,runAuditStep}=require('./portable-update-audit.cjs');
 const root=path.resolve(__dirname,'..'),platform=process.platform,arch=process.arch;
-let directory,server,parent;
+let directory,server,parent,phase='initialize Electron';
+const progress=[];
+const report=line=>{progress.push(new Date().toISOString()+' '+line);console.log('Portable update audit: '+line);};
+const step=(label,operation,timeout)=>{phase=label;return runAuditStep(label,operation,{timeout,onProgress:report});};
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 // No visual rendering is exercised here; avoid unnecessary CI GPU initialization.
 app.disableHardwareAcceleration();
-const deadline=setTimeout(()=>{console.error('Portable app update audit timed out');app.exit(1);},300000);
+// macOS includes bundle copies, DMG creation/extraction and resource sealing.
+// Each phase has its own limit; allow their combined work on slower CI hosts.
+const deadline=setTimeout(()=>void failAudit(new Error('Portable app update audit timed out during '+phase)),platform==='darwin'?900000:600000);
 async function sealFixture(bundle) {
  if(platform!=='darwin')return;
  // This audit changes package.json and scripts in disposable copies. Re-seal
  // those copies after each edit, without modifying the real release artifacts.
- await require('@electron/osx-sign').signAsync({app:bundle,identity:'-',identityValidation:false,platform:'darwin',
-  version:require('electron/package.json').version,preAutoEntitlements:false,
-  optionsForFile:()=>({hardenedRuntime:false,entitlements:require.resolve('app-builder-lib/templates/entitlements.mac.plist')})});
- await verifySignature(bundle);
+ await sealFixtureBundle(bundle);
 }
 async function waitForResult(stage) {
  const end=Date.now()+120000; // The helper itself allows 90 seconds for startup.
@@ -34,8 +36,9 @@ async function waitForResult(stage) {
  throw new Error('Helper did not finish within its startup deadline');
 }
 async function saveDiagnostics() {
- if(!directory)return;
  const out=path.join(root,'test-results',`portable-update-verification-${platform}-${arch}`);await fs.mkdir(out,{recursive:true});
+ await fs.writeFile(path.join(out,'audit-progress.log'),progress.join('\n')+'\nCurrent phase: '+phase+'\n');
+ if(!directory)return;
  const base=path.join(directory,'profile/app-update-staging');
  for(const item of await fs.readdir(base).catch(()=>[])) {
   if(!item.startsWith('update-'))continue;
@@ -47,11 +50,21 @@ async function saveDiagnostics() {
  const startup=await fs.readFile(path.join(directory,'profile/audit-startup.json'),'utf8').catch(()=>null);
  if(startup!==null){await fs.writeFile(path.join(out,'audit-startup.json'),startup);console.error('Packaged fixture startup: '+startup);}
 }
+let failing=false;
+async function failAudit(error) {
+ if(failing)return;failing=true;clearTimeout(deadline);
+ report('FAILED during '+phase+': '+error.message);console.error(error);parent?.kill();
+ // Save logs even on the global watchdog path, which previously exited before
+ // collecting the helper's startup/error logs. Bound diagnostic collection.
+ const exitTimer=setTimeout(()=>app.exit(1),10000);
+ try {await saveDiagnostics();}catch(diagnosticError){console.error(diagnosticError);}
+ finally {clearTimeout(exitTimer);app.exit(1);}
+}
 app.whenReady().then(async()=>{
  directory=await fs.mkdtemp(path.join(os.tmpdir(),'pro-portable-audit-'));
  const bundle=platform==='darwin',original=path.join(root,'dist',platform==='win32'?'win-unpacked':platform==='linux'?'linux-unpacked':arch==='arm64'?'mac-arm64/Pokemon Showdown Pro.app':'mac/Pokemon Showdown Pro.app');
  const target=path.join(directory,bundle?'installed/Pokemon Showdown Pro.app':'installed'),source=path.join(directory,bundle?'candidate/Pokemon Showdown Pro.app':'candidate');
- await fs.cp(original,target,{recursive:true,verbatimSymlinks:true});
+ await step('copy installed fixture',()=>fs.cp(original,target,{recursive:true,verbatimSymlinks:true}));
  const resources=folder=>path.join(folder,bundle?'Contents/Resources/app':'resources/app');
  const profile=path.join(directory,'profile');await fs.mkdir(profile);await fs.writeFile(path.join(profile,'preferences.json'),'saved audit profile');
  // These fixture apps create no windows, never connect to Showdown and mute
@@ -61,15 +74,19 @@ app.whenReady().then(async()=>{
  await fs.writeFile(path.join(resources(target),'package.json'),JSON.stringify(pkg));
  await fs.writeFile(path.join(resources(target),'audit-main.cjs'),stub);
  await fs.copyFile(path.join(root,'app/app-update-install.cjs'),path.join(resources(target),'app/app-update-install.cjs'));
- await sealFixture(target);
- await fs.cp(target,source,{recursive:true,verbatimSymlinks:true});pkg.version='99.0.0';await fs.writeFile(path.join(resources(source),'package.json'),JSON.stringify(pkg));
- await sealFixture(source);
+ await step('seal installed fixture',()=>sealFixture(target));
+ await step('copy candidate fixture',()=>fs.cp(target,source,{recursive:true,verbatimSymlinks:true}));pkg.version='99.0.0';await fs.writeFile(path.join(resources(source),'package.json'),JSON.stringify(pkg));
+ await step('seal candidate fixture',()=>sealFixture(source));
  const name=`PokemonShowdownPro-99.0.0-${bundle?'macos':platform==='win32'?'windows':'linux'}-${arch}.${bundle?'dmg':platform==='win32'?'zip':'tar.gz'}`,archive=path.join(directory,name);
- if(platform==='win32')await zipFixture(source,archive);
- else if(platform==='linux')await require('tar').c({file:archive,gzip:true,cwd:source},['.']);
- else await promisify(execFile)('/usr/bin/hdiutil',['create','-quiet','-srcfolder',path.dirname(source),'-format','UDZO',archive],{timeout:60000});
- const hash=crypto.createHash('sha256');for await(const chunk of require('node:fs').createReadStream(archive))hash.update(chunk);
- const checksum=hash.digest('hex');
+ await step('create update archive',async()=>{
+  if(platform==='win32')await zipFixture(source,archive);
+  else if(platform==='linux')await require('tar').c({file:archive,gzip:true,cwd:source},['.']);
+  else await promisify(execFile)('/usr/bin/hdiutil',['create','-quiet','-srcfolder',path.dirname(source),'-format','UDZO',archive],{timeout:60000});
+ });
+ const checksum=await step('hash update archive',async()=>{
+  const hash=crypto.createHash('sha256');for await(const chunk of require('node:fs').createReadStream(archive))hash.update(chunk);
+  return hash.digest('hex');
+ });
  server=http.createServer((request,response)=>{
   if(request.url.endsWith('.sha256'))response.end(checksum+'  '+name+'\n');
   else {require('node:fs').createReadStream(archive).pipe(response);}
@@ -91,10 +108,10 @@ app.whenReady().then(async()=>{
    prepared=await prepareAppUpdate({app:{getPath:()=>profile},root,platform,arch,execPath:executable,download,onProgress,signal,fetch:fetchLocal});
    prepared.job.parentPid=parent.pid;await fs.writeFile(path.join(prepared.stage,'job.json'),JSON.stringify(prepared.job));return prepared;
   }});
- await updates.check(true);assert.equal(updates.status,'ready',updates.message);
+ await step('download and validate update',()=>updates.check(true));assert.equal(updates.status,'ready',updates.message);
  assert.equal(JSON.parse(await fs.readFile(path.join(resources(target),'package.json'))).version,'98.0.0');
- await updates.action();assert.notEqual(updates.status,'error',updates.message);
- let result=await waitForResult(prepared.stage);
+ await step('start replacement helper',()=>updates.action(),20000);assert.notEqual(updates.status,'error',updates.message);
+ let result=await step('replace app and confirm startup',()=>waitForResult(prepared.stage),125000);
  assert.equal(result.installed,true,JSON.stringify(result));
  assert.equal(JSON.parse(await fs.readFile(path.join(resources(target),'package.json'))).version,'99.0.0');
  assert.equal(JSON.parse(await fs.readFile(path.join(resources(result.backup),'package.json'))).version,'98.0.0');
@@ -105,21 +122,22 @@ app.whenReady().then(async()=>{
  const sourcePackage=path.join(resources(prepared.job.source),'package.json');
  const failedPkg=JSON.parse(await fs.readFile(sourcePackage));failedPkg.version='100.0.0';await fs.writeFile(sourcePackage,JSON.stringify(failedPkg));
  await fs.writeFile(path.join(resources(prepared.job.source),'audit-main.cjs'),`require(${JSON.stringify(path.join(root,'scripts/mute-test-audio.cjs'))});require('electron').app.exit(2);`);
- await sealFixture(prepared.job.source);
+ await step('seal failing candidate fixture',()=>sealFixture(prepared.job.source));
  parent=spawn(runtime,['-e','setInterval(()=>{},1000)'],{windowsHide:true,stdio:'ignore'});
  await new Promise((resolve,reject)=>{parent.once('spawn',resolve);parent.once('error',reject);});
- prepared.job.version='100.0.0';prepared.job.parentPid=parent.pid;prepared.job.packageHash=await packageHash(prepared.job.source);
+ prepared.job.version='100.0.0';prepared.job.parentPid=parent.pid;prepared.job.packageHash=await step('hash failing candidate fixture',()=>packageHash(prepared.job.source));
  await fs.writeFile(path.join(prepared.stage,'job.json'),JSON.stringify(prepared.job));
  for(const name of ['helper-ready','confirmed','result.json'])await fs.rm(path.join(prepared.stage,name),{force:true});
- await launchPortableInstaller(prepared);parent.kill();result=null;
- result=await waitForResult(prepared.stage);
+ await step('start rollback helper',()=>launchPortableInstaller(prepared),20000);parent.kill();result=null;
+ result=await step('reject failed startup and restore previous app',()=>waitForResult(prepared.stage),125000);
  assert.equal(result.installed,false,'A candidate without startup confirmation must roll back');
  assert.equal(JSON.parse(await fs.readFile(path.join(resources(target),'package.json'))).version,'99.0.0');
  assert.equal(await fs.readFile(path.join(profile,'preferences.json'),'utf8'),'saved audit profile');
  await sleep(2000);
  console.log('In-app portable update passed: real download/checksum, detached helper, parent exit, replacement, startup confirmation, backup, failed-start rollback and preserved profile.');
 }).then(async()=>{
- clearTimeout(deadline);parent?.kill();if(server)await new Promise(resolve=>server.close(resolve));
- if(directory){assert.equal(path.dirname(directory),path.resolve(os.tmpdir()));await fs.rm(directory,{recursive:true,force:true,maxRetries:10,retryDelay:200});}
+ parent?.kill();if(server)await step('close download server',()=>new Promise(resolve=>server.close(resolve)),10000);
+ if(directory){assert.equal(path.dirname(directory),path.resolve(os.tmpdir()));await step('clean isolated fixtures',()=>fs.rm(directory,{recursive:true,force:true,maxRetries:10,retryDelay:200}),60000);}
+ clearTimeout(deadline);
  app.exit(0);
-}).catch(async error=>{console.error(error);await saveDiagnostics().catch(console.error);parent?.kill();app.exit(1);});
+}).catch(failAudit);
