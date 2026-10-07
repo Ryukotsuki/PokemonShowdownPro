@@ -23,6 +23,22 @@ test('a copy/rename failure restores the original app, including files already r
  assert.equal(await fs.readFile(path.join(f.job.target,'resources/app/app/main.cjs'),'utf8'),'1.1.2');
  assert.equal((await fs.readFile(f.job.execPath)).toString('ascii',0,2),'MZ');
 });
+test('a confirmed Linux update stays installed when the new app closes normally',async t=>{
+ const f=await fixture(t,'linux'),profile=path.join(f.directory,'profile');
+ await fs.writeFile(path.join(profile,'preferences.json'),'saved preferences');
+ const result=await applyUpdate(f.job,{launch:async(executable,args)=>{
+  const app={getPath:()=>profile,getVersion:()=> '1.1.3'};
+  assert.equal(await confirmAppUpdate(app,executable,args),true);
+  // The real confirmation wait must accept startup even if the user has
+  // already closed the new process by the time the helper checks its marker.
+  return {exitCode:0,signalCode:null};
+ }});
+ assert.equal(JSON.parse(await fs.readFile(path.join(f.stage,'result.json'))).installed,true);
+ assert.equal(JSON.parse(await fs.readFile(f.package(f.job.target))).version,'1.1.3');
+ assert.equal(JSON.parse(await fs.readFile(f.package(result.backup))).version,'1.1.2');
+ await assert.rejects(fs.access(path.join(result.backup,'failed')));
+ assert.equal(await fs.readFile(path.join(profile,'preferences.json'),'utf8'),'saved preferences');
+});
 test('failed startup rolls back to the previous app and restarts it without an update flag',async t=>{
  for(const platform of ['win32','darwin']) {
   const f=await fixture(t,platform),launches=[];

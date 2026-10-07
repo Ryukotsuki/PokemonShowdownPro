@@ -1,7 +1,7 @@
 {
   "name": "pokemon-showdown-pro",
   "desktopName": "pokemon-showdown-pro.desktop",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "private": true,
   "description": "Official Pokémon Showdown client with Showdex, Pro styling, and optional add-ons",
   "license": "AGPL-3.0-or-later",

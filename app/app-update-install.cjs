@@ -152,9 +152,12 @@ async function confirmAppUpdate(app,execPath=process.execPath,args=process.argv)
    const job=JSON.parse(await fs.readFile(path.join(stage,'job.json'),'utf8'));
    // macOS /var and /private/var (and other installation aliases) can name
    // the same executable. Keep the identity check, using the actual file paths.
-   if(job.token===token&&job.version===app.getVersion()&&await fs.realpath(job.execPath)===await fs.realpath(execPath))await fs.writeFile(path.join(stage,'confirmed'),token);
+   if(job.token===token&&job.version===app.getVersion()&&await fs.realpath(job.execPath)===await fs.realpath(execPath)) {
+    await fs.writeFile(path.join(stage,'confirmed'),token);return true;
+   }
   }catch{}
  }
+ return false;
 }
 async function cleanupCompletedUpdates(app,execPath=process.execPath,platform=process.platform) {
  const base=path.join(app.getPath('userData'),'app-update-staging'),target=installation(execPath,platform),completed=[];

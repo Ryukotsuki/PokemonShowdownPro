@@ -387,6 +387,13 @@ async function createWindow() {
   client.webContents.on('focus', () => hubTooltip?.hide());
   layout();
   if ((!smoke && !verifyRelease) || process.argv.includes('--visible')) window.show();
+  // The local app can start successfully while Showdown's network load stalls.
+  // Confirm only after the Battle Hub and its IPC bridge are usable.
+  if (process.argv.some(arg => arg.startsWith('--pro-update-confirm='))) {
+    const ready = await window.webContents.executeJavaScript('window.pro.getState().then(state=>!!state&&!!document.getElementById("app-updates-title"))');
+    if (!ready) throw new Error('The updated Battle Hub did not initialize');
+    if (!await require('./app-update-install.cjs').confirmAppUpdate(app)) throw new Error('The app update could not confirm startup');
+  }
   const loading = client.webContents.loadURL(smoke ? CLIENT_URL+(process.argv.includes('--new-client') || process.argv.includes('--startup-only') ? 'newclient' : 'oldclient') : CLIENT_URL+'newclient').catch(() => {});
   // Smoke checks wait for the bridge, not every third-party page resource.
   if (!smoke && !verifyRelease) await loading;
@@ -481,7 +488,7 @@ async function createWindow() {
 }
 // A second installed instance must not install an update while the first is battling.
 const primaryInstance = !app.isPackaged || smoke || verifyRelease || app.requestSingleInstanceLock();
-if (primaryInstance) app.whenReady().then(createWindow).then(()=>require('./app-update-install.cjs').confirmAppUpdate(app)).catch(error => { console.error(error); app.exit(1); });
+if (primaryInstance) app.whenReady().then(createWindow).catch(error => { console.error(error); app.exit(1); });
 else app.quit();
 app.on('second-instance', () => { if (window) { if (window.isMinimized()) window.restore(); window.show(); window.focus(); } });
 app.on('before-quit', () => { clearInterval(updateTimer);clearInterval(appUpdateTimer);appUpdates?.stop();addonUpdates?.stop(); closing = true; navigationVersion++; });

@@ -84,6 +84,12 @@ jobs:
         run: xvfb-run -a node node_modules/electron/cli.js scripts/audit-showdex-startup.cjs --no-sandbox
       - name: Download browser add-ons
         run: npm run download:addons
+      - name: Verify update startup without a Showdown connection
+        if: runner.os != 'Linux'
+        run: node node_modules/electron/cli.js scripts/audit-update-startup.cjs
+      - name: Verify update startup without a Showdown connection on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node node_modules/electron/cli.js scripts/audit-update-startup.cjs --no-sandbox
       - name: Verify app updater downloads
         if: runner.os != 'Linux'
         run: node node_modules/electron/cli.js scripts/audit-app-updates.cjs
