@@ -17,13 +17,20 @@ app.whenReady().then(async()=>{
  const streamSession=session.fromPartition('pro-streamer-stream');isolateAuditNetwork(streamSession);
  const assets=async req=>{const url=new URL(req.url),base=url.hostname==='stream'?path.join(root,'app/stream'):url.hostname==='showdex'?path.join(root,'build/showdex'):url.hostname==='assets'?path.join(root,'app/assets'):null;if(!base)return new Response('',{status:404});const file=path.resolve(base,'.'+decodeURIComponent(url.pathname));if(!file.startsWith(base+path.sep))return new Response('',{status:403});const response=await net.fetch(pathToFileURL(file).href),headers=new Headers(response.headers);headers.set('Access-Control-Allow-Origin','https://play.pokemonshowdown.com');return new Response(response.body,{status:response.status,headers});};
  streamSession.protocol.handle('showdown-pro',assets);clientSession.protocol.handle('showdown-pro',assets);
- const source=new BrowserWindow({show:false,width:1400,height:900,webPreferences:{session:clientSession,offscreen:true,backgroundThrottling:false}});source.webContents.setAudioMuted(true);
+ const source=new BrowserWindow({show:false,width:process.argv.includes('--compact-start')?760:1400,height:900,webPreferences:{session:clientSession,offscreen:true,backgroundThrottling:false}});source.webContents.setAudioMuted(true);
  source.webContents.on('console-message',details=>{if(details.level==='error'&&/TypeError|Uncaught|Showdex/.test(details.message))console.error('Player renderer:',details.message.slice(0,500));});
  const hub=new BrowserWindow({show:false,width:360,height:900,webPreferences:{offscreen:true,backgroundThrottling:false}});hub.webContents.setAudioMuted(true);
  await hub.loadURL('data:text/html,'+encodeURIComponent('<body style="margin:0;background:#203d51;color:white;font:24px Arial"><h1>Battle Hub</h1></body>'));
  let visibility={hub:false,showdex:false,moves:false},barrier;const captures=new WeakMap();
  const stream=new StreamerStream({createWindow:options=>new BrowserWindow({...options,webPreferences:{...options.webPreferences,offscreen:true}}),contents:()=>source.webContents,visible:false,interval:100,visibility:()=>visibility,hub:()=>({contents:hub.webContents,x:0,width:360,height:hub.getContentSize()[1]}),capture:async contents=>{const action=barrier;barrier=null;const image=await stream.nextImage(contents);if(action)await action();return image;},onFrame:image=>{if(stream.lastFrame&&image)captures.set(stream.lastFrame,image);}});
  const sourceRun=code=>source.webContents.executeJavaScript(code),reports=[];
+ const loadClient=async version=>{
+  await loadAuditClient(source.webContents,'https://play.pokemonshowdown.com/'+version+'client');const host=version==='old'?'app':'PS';
+  await wait(()=>sourceRun(`!!window.${host}?.rooms`),'client ready');await wait(()=>sourceRun(version==='old'?'app.socket?.readyState===1':'PS.connection?.connected'),'client connected');
+  await sourceRun(version==='old'?"app.socket.send=()=>{};app.user.set({name:'ProTest',named:true});Storage.prefs('autotimer',false);":"PS.connection.send=()=>{};PS.user.setName('ProTest',true,'1');PS.prefs.set('autotimer',false);");
+  await sourceRun(fs.readFileSync(path.join(root,'app/client-theme.js'),'utf8'));await source.webContents.insertCSS(require('../app/client-theme-css.cjs'),{cssOrigin:'user'});
+  await sourceRun(fs.readFileSync(path.join(root,'build/showdex/main.js'),'utf8'));await wait(()=>sourceRun('!!document.querySelector("[data-showdex-module=hellodex]")&&!!window.__showdownProCalcdex'),'Showdex loaded');
+ };
  const ready=async()=>{await wait(()=>!!stream.lastFrame,'masked mirror frame');await wait(()=>stream.window.webContents.executeJavaScript('!document.getElementById("mirror").hidden'),'canvas decoded');};
  // Pair each frame with its own capture across asynchronous renderer reads.
  const pixels=frame=>{const image=captures.get(frame);assert.ok(image,'Frame has its matching source capture');return image.toBitmap({scaleFactor:1});};
@@ -31,15 +38,25 @@ app.whenReady().then(async()=>{
  try{
   await stream.open();assert.equal(stream.window.webContents.isAudioMuted(),true);assert.equal(await stream.window.webContents.executeJavaScript('typeof pro'),'undefined');
   for(const version of ['old','new']){
-   await loadAuditClient(source.webContents,'https://play.pokemonshowdown.com/'+version+'client');const host=version==='old'?'app':'PS',id='battle-gen9randombattle-'+(version==='old'?998901:998902);
-   await wait(()=>sourceRun(`!!window.${host}?.rooms`),'client ready');await wait(()=>sourceRun(version==='old'?'app.socket?.readyState===1':'PS.connection?.connected'),'client connected');
-   await sourceRun(version==='old'?"app.socket.send=()=>{};app.user.set({name:'ProTest',named:true});Storage.prefs('autotimer',false);":"PS.connection.send=()=>{};PS.user.setName('ProTest',true,'1');PS.prefs.set('autotimer',false);");
-   await sourceRun(fs.readFileSync(path.join(root,'app/client-theme.js'),'utf8'));await source.webContents.insertCSS(require('../app/client-theme-css.cjs'),{cssOrigin:'user'});
-   await sourceRun(fs.readFileSync(path.join(root,'build/showdex/main.js'),'utf8'));await wait(()=>sourceRun('!!document.querySelector("[data-showdex-module=hellodex]")'),'Showdex loaded');
+   const host=version==='old'?'app':'PS',id='battle-gen9randombattle-'+(version==='old'?998901:998902);
+   source.setContentSize(process.argv.includes('--compact-start')?760:1400,900);
+   await loadClient(version);
+   // Auto mode can choose a chat overlay on a small CI desktop, which has no
+   // navigation tab. This audit specifically verifies that tab stays visible;
+   // select panel mode in this isolated database, then reload it into Showdex.
+   await sourceRun(`new Promise((resolve,reject)=>{
+    const req=indexedDB.open('showdex');req.onerror=()=>reject(req.error);req.onsuccess=()=>{
+     const db=req.result,tx=db.transaction('settings','readwrite'),store=tx.objectStore('settings'),get=store.get('calcdex');
+     get.onsuccess=()=>store.put({...get.result,openAs:'panel',openOnStart:'always',closeOn:'never'},'calcdex');
+     tx.oncomplete=()=>{db.close();resolve();};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error);};
+    };
+   });`);
+   await loadClient(version);
    await sourceRun(`document.documentElement.classList.add('showdown-pro','dark');${host}.receive(${JSON.stringify('>'+id+'\n'+history().filter(line=>!line.startsWith('|request|')).join('\n'))});${host}.receive(${JSON.stringify('>'+id+'\n|request|'+JSON.stringify(request()))});${host}.focusRoom(${JSON.stringify(id)});void 0;`);
    await wait(()=>sourceRun(`!!${host}.rooms[${JSON.stringify(id)}]?.battle`),'Battle mounted');
    await sourceRun(`${host}.rooms[${JSON.stringify(id)}].battle.seekTurn(Infinity);void 0;`);
    await wait(()=>sourceRun(`document.getElementById('room-${id}').textContent.includes('Dragon Pulse')`),'own moves still visible');
+   await wait(()=>sourceRun('!!document.querySelector(\'[id^="roomtab-calcdex"],a.roomtab[href*="calcdex"]\')'),'Calcdex panel navigation mounted');
    // Both sidebar Tera cards must follow their own switch even when every
    // other visibility option is on, in landscape and portrait captures.
    await sourceRun(`(()=>{for(const [side,edge] of [['you','left'],['opponent','right']]){const card=document.createElement('div');card.className='ditTeraInfo';card.dataset.side=side;card.style='position:fixed;'+edge+':10px;top:240px;width:80px;height:90px;box-sizing:border-box;background:#bb22dd;z-index:999999';card.innerHTML='<span class="ditTeraLabel">Tera</span><strong class="ditPokemonName">'+(side==='you'?'Calyrex-Ice':'Mienshao')+'</strong><span class="ditTeraType">'+(side==='you'?'Fighting':'Poison')+'</span>';document.body.append(card);}})();void 0;`);
@@ -160,6 +177,11 @@ app.whenReady().then(async()=>{
   }
   await source.webContents.loadURL('data:text/html,<body style="background:orange">A different app page</body>');stream.invalidate();await ready();assert.equal(stream.lastFrame.hub,null);console.log('Non-battle navigation mirrors the current page; renderer is isolated and muted.');
   fs.writeFileSync(path.join(out,'mirror-results.json'),JSON.stringify(reports,null,2));
- }catch(error){fs.writeFileSync(path.join(out,'failure.log'),error.stack||String(error));for(const [name,contents] of [['player',source.webContents],['stream',stream.window?.webContents]])if(contents&&!contents.isDestroyed())try{fs.writeFileSync(path.join(out,name+'-failure.png'),(await contents.capturePage()).toPNG());}catch{}throw error;}
+ }catch(error){
+  fs.writeFileSync(path.join(out,'failure.log'),error.stack||String(error));
+  try{fs.writeFileSync(path.join(out,'failure-state.json'),JSON.stringify(await sourceRun(`({width:innerWidth,height:innerHeight,showdex:window.__SHOWDEX_INIT,rooms:Object.keys((window.app||window.PS)?.rooms||{}),tabs:[...document.querySelectorAll('a.roomtab,[id^="roomtab-"]')].map(e=>({id:e.id,href:e.getAttribute('href'),text:e.textContent})),battles:Object.entries((window.app||window.PS)?.rooms||{}).filter(([,r])=>r.battle).map(([id,r])=>({id,overlay:r.battle.calcdexAsOverlay}))})`),null,2));}catch{}
+  for(const [name,contents] of [['player',source.webContents],['stream',stream.window?.webContents]])if(contents&&!contents.isDestroyed())try{fs.writeFileSync(path.join(out,name+'-failure.png'),(await contents.capturePage()).toPNG());}catch{}
+  throw error;
+ }
  finally{stream.destroy();source.destroy();hub.destroy();}
 }).then(()=>app.exit(0)).catch(error=>{console.error(error);app.exit(1);});

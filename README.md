@@ -31,6 +31,9 @@
 - ⚔️ **Battle Hub**<br>
   Manage active matches, add-ons, messages, results, and replay links from one collapsible panel. Toggle fullscreen from the Hub or with **F11**.
 
+- 🎭 **Theater Mode**<br>
+  Give the battlefield more room with resizable, collapsible Chat and Calcdex panels. Available for live battles and replays in Light, Dark, and Pro themes.
+
 - 🛡️ **Streamer Mode**<br>
   Share a separate battle window in OBS or Discord while keeping your move choices, switch controls, and Showdex visible in your main window.
 
@@ -104,6 +107,14 @@ The **new client** and **Pro theme** are selected by default on a fresh setup. A
 ### 🎮 Set Up Your Battles
 
 Open **Battle → Match flow** to enable the automatic timer or choose which results should upload replays. Confirmed replay links appear in **History** after the upload finishes.
+
+### 🎭 Theater Mode
+
+Click the expand button beside the battle controls, or press **Ctrl+Shift+T**, to enter Theater Mode for the selected battle. It enlarges the battlefield, hides navigation and the Battle Hub, and keeps move and replay controls within reach. Theater Mode works with live battles and replays in both clients, with matching Light, Dark, and Pro themes.
+
+Chat and the full Calcdex share a resizable right sidebar. Drag the dividers to adjust its width and the space between panels. Collapse one panel to leave a compact header above or below the other; collapse both to reclaim battle space with narrow side tabs. Calcdex includes sets, abilities, natures, items, IVs/EVs, stats, stages, and field controls.
+
+Click the restore button or press **Esc** to return. Escape leaves open dialogs and text entry alone. Sidebar width, panel split, and collapse states are saved; Pro starts in normal mode and keeps your existing zoom settings.
 
 ### 🛡️ Stream Your Battle
 
@@ -273,9 +284,3 @@ Built on [Pokémon Showdown](https://github.com/smogon/pokemon-showdown-client),
 Pokémon Showdown Pro is an independent fan-made project. It is not affiliated with or endorsed by Pokémon Showdown, Nintendo, Game Freak, or The Pokémon Company.
 
 Licensed under [AGPL-3.0-or-later](LICENSE). Third-party code and assets retain their respective licenses and ownership.
-
----
-
-## Theater Mode
-
-Click the expand icon immediately left of the battle timer, or press **Ctrl+Shift+T**, to enter Theater Mode for the selected battle. It fills the battle stage while keeping move and replay controls at their normal Pro size, hides navigation and Battle Hub, and places chat and full Calcdex in a resizable right column. Collapsing them creates narrow vertical edge tabs and reclaims battle space. The docked calculator includes sets, ability/nature/item, IVs/EVs, stats, stages and field controls; enlarge it for more space. Click the restore icon or press **Esc** to return; Escape leaves open dialogs and text entry alone. Utility width, panel split and collapse states are saved; startup remains in normal mode and existing zoom preferences are unchanged.

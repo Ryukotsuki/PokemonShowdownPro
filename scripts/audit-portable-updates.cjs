@@ -3,13 +3,13 @@
 require('./mute-test-audio.cjs');
 const {app,net}=require('electron');
 const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto'),http=require('node:http');
-const {spawn,execFile}=require('node:child_process'),{promisify}=require('node:util');
+const {spawn}=require('node:child_process');
 const assert=require('node:assert/strict');
 const {AppUpdates,launchPortableInstaller}=require('../app/app-updates.cjs');
 const {prepareAppUpdate}=require('../app/app-update-package.cjs');
 const {packageHash}=require('../app/app-update-install.cjs');
 const {zipFixture}=require('../tests/app-update-fixtures.cjs');
-const {sealFixtureBundle,runAuditStep}=require('./portable-update-audit.cjs');
+const {sealFixtureBundle,runAuditStep,createFixtureDmg}=require('./portable-update-audit.cjs');
 const root=path.resolve(__dirname,'..'),platform=process.platform,arch=process.arch;
 let directory,server,parent,phase='initialize Electron';
 const progress=[];
@@ -81,8 +81,8 @@ app.whenReady().then(async()=>{
  await step('create update archive',async()=>{
   if(platform==='win32')await zipFixture(source,archive);
   else if(platform==='linux')await require('tar').c({file:archive,gzip:true,cwd:source},['.']);
-  else await promisify(execFile)('/usr/bin/hdiutil',['create','-quiet','-srcfolder',path.dirname(source),'-format','UDZO',archive],{timeout:60000});
- });
+  else await createFixtureDmg(path.dirname(source),archive,{onProgress:report});
+ },platform==='darwin'?420000:180000);
  const checksum=await step('hash update archive',async()=>{
   const hash=crypto.createHash('sha256');for await(const chunk of require('node:fs').createReadStream(archive))hash.update(chunk);
   return hash.digest('hex');

@@ -1,6 +1,28 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os');
-const {sealFixtureBundle,runAuditStep}=require('../scripts/portable-update-audit.cjs');
+const {sealFixtureBundle,runAuditStep,createFixtureDmg}=require('../scripts/portable-update-audit.cjs');
+
+test('fixture DMG creation retries silent CI failures without disabling real archive validation',async()=>{
+ const calls=[],waits=[],progress=[];
+ const result=await createFixtureDmg('/candidate','/scratch/update.dmg',{
+  run:async(command,args,options)=>{calls.push({command,args,options});if(calls.length<3)throw Object.assign(new Error('hdiutil failed'),{code:1,stdout:'',stderr:''});return {stdout:'created'};},
+  wait:async ms=>waits.push(ms),onProgress:line=>progress.push(line)
+ });
+ assert.equal(result.stdout,'created');assert.equal(calls.length,3);assert.deepEqual(waits,[5000,10000]);
+ assert.ok(calls.every(call=>call.command==='/usr/bin/hdiutil'&&call.options.timeout===120000));
+ assert.ok(calls[0].args.includes('-nospotlight'));assert.ok(calls[0].args.includes('-ov'));assert.ok(!calls[0].args.includes('-quiet'));
+ assert.equal(calls[0].args.at(-1),'/scratch/update.dmg');assert.match(progress[0],/attempt 1\/3.*exit 1/);
+});
+
+test('fixture DMG failures remain fatal and preserve diagnostics after bounded retries',async()=>{
+ for(const [failure,expected] of [[{code:1,stderr:'disk image service unavailable'},3],[{code:22,stderr:'invalid argument'},1],[{code:1,killed:true},1],[{code:'ENOENT'},1]]){
+  let calls=0;const progress=[];
+  await assert.rejects(createFixtureDmg('/candidate','/scratch/update.dmg',{
+   run:async()=>{calls++;throw Object.assign(new Error('failed'),failure);},wait:async()=>{},onProgress:line=>progress.push(line)
+  }),error=>{assert.match(error.message,new RegExp(failure.stderr||'failed'));assert.equal(error.cause.code,failure.code);return true;});
+  assert.equal(calls,expected);assert.equal(progress.length,expected);
+ }
+});
 test('edited macOS fixtures renew only the outer seal and still strictly verify nested signatures',async t=>{
  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'pro-audit-seal-'));
  t.after(()=>{assert.equal(path.dirname(directory),path.resolve(os.tmpdir()));return fs.rm(directory,{recursive:true,force:true});});
