@@ -80,9 +80,14 @@ module.exports = async ({ window, client, root, state, hubTooltip, waitFor, acti
   await setting('saveWinningReplays',false);await setting('saveLosingReplays',false);
   await setting('sidebarTab','history');
   await waitFor(()=>ui('return !document.getElementById("page-history").hidden;'));
+  // Fixture URLs are intentionally not uploaded. Check native routing here;
+  // audit-replays-hub exercises actual playback against the replay service.
+  await run('window.__savedReplayOpen=__showdownProReplays.open;window.__openedReplayURLs=[];__showdownProReplays.open=async url=>__openedReplayURLs.push(url);');
   await ui('document.querySelector("#recent-replays button").click();document.querySelectorAll("#recent-replays button")[1].click();');
-  await waitFor(()=>actions.opened.length===1 && actions.copies.length===1);
-  assert.equal(actions.opened[0],state().recentReplays[0].url);
+  await waitFor(async()=>await run('return __openedReplayURLs.length===1;') && actions.copies.length===1);
+  assert.equal((await run('return __openedReplayURLs;'))[0],state().recentReplays[0].url);
+  assert.equal(actions.opened.length,0);
+  await run('__showdownProReplays.open=__savedReplayOpen;');
   assert.equal(actions.copies[0],state().recentReplays[0].url);
   await ui('document.getElementById("tab-battle").focus();');
   panel.sendInputEvent({type:'keyDown',keyCode:'Right'});panel.sendInputEvent({type:'keyUp',keyCode:'Right'});

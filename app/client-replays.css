@@ -1,0 +1,64 @@
+/* Follow the native theme classes live, including System. Classic puts .dark
+   on body; the new client also puts it on html. Pro keeps its blue palette. */
+html body dialog.pro-replays {
+ --replays-surface:#f4f6f8;--replays-text:#24313e;--replays-muted:#526575;--replays-border:#a8b3bd;
+ --replays-field:#fff;--replays-card:#fff;--replays-hover:#e5edf4;--replays-accent:#31668a;
+ --replays-button-top:#f8fafc;--replays-button-bottom:#e3e9ef;--replays-button-hover-top:#e3edf5;--replays-button-hover-bottom:#cdddea;
+ --replays-thumb:#8395a6;--replays-backdrop:#17212b99;--replays-scheme:light;
+ box-sizing:border-box;width:min(860px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:22px;
+ border:1px solid var(--replays-border);border-radius:12px;background:var(--replays-surface)!important;color:var(--replays-text)!important;
+ box-shadow:0 12px 48px #0008;font:15px "Segoe UI",Arial,sans-serif;overflow:auto;clip-path:inset(0 round 12px);
+ color-scheme:var(--replays-scheme);scrollbar-width:thin;scrollbar-color:var(--replays-thumb) var(--replays-surface);
+}
+html:not(.showdown-pro):is(.dark,:has(body.dark)) dialog.pro-replays {
+ --replays-surface:#282c31;--replays-text:#e4e8ed;--replays-muted:#aebdc9;--replays-border:#555e68;
+ --replays-field:#1d2228;--replays-card:#323840;--replays-hover:#414b56;--replays-accent:#9ecbe8;
+ --replays-button-top:#414952;--replays-button-bottom:#2d343c;--replays-button-hover-top:#536171;--replays-button-hover-bottom:#3b4858;
+ --replays-thumb:#697989;--replays-backdrop:#101419bb;--replays-scheme:dark;
+}
+html.showdown-pro dialog.pro-replays {
+ --replays-surface:#172f40;--replays-text:#e8f1f7;--replays-muted:#b9ddec;--replays-border:#638ba2;
+ --replays-field:#112634;--replays-card:#1d3a4d;--replays-hover:#284e65;--replays-accent:#83c8ed;
+ --replays-button-top:#315e7a;--replays-button-bottom:#23465e;--replays-button-hover-top:#4786a8;--replays-button-hover-bottom:#2b5b78;
+ --replays-thumb:#4e809b;--replays-backdrop:#06121dcc;--replays-scheme:dark;
+}
+.pro-replays::backdrop {background:var(--replays-backdrop);}
+.pro-replays header {display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.pro-replays h2 {margin:0;font-size:24px;color:inherit;}
+.pro-replays header button {font-size:22px;min-width:34px;}
+.pro-replays-intro {color:var(--replays-muted);}
+.pro-replays form {margin:16px 0;}
+.pro-replays form:first-of-type {display:flex;gap:10px;align-items:end;padding-bottom:18px;border-bottom:1px solid var(--replays-border);}
+.pro-replays form:first-of-type label {flex:1;}
+.pro-replays label {display:flex;flex-direction:column;gap:6px;min-width:0;font-size:13px;font-weight:600;}
+html body dialog.pro-replays .textbox {box-sizing:border-box;width:100%;min-width:0;padding:8px;border:1px solid var(--replays-border)!important;border-radius:6px;background:var(--replays-field)!important;color:var(--replays-text)!important;box-shadow:none!important;font:14px "Segoe UI",Arial,sans-serif;}
+html body dialog.pro-replays .textbox::placeholder {color:var(--replays-muted)!important;opacity:1;}
+/* Native user-origin CSS can paint broad button backgrounds. Own these controls
+   at the same origin and sufficient specificity in every theme. */
+html body dialog.pro-replays button.button {appearance:none!important;padding:7px 12px!important;border:1px solid var(--replays-border)!important;border-radius:6px!important;background-color:var(--replays-button-bottom)!important;background-image:linear-gradient(180deg,var(--replays-button-top),var(--replays-button-bottom))!important;color:var(--replays-text)!important;text-shadow:none!important;box-shadow:inset 0 1px #ffffff24,0 3px 9px #0003!important;cursor:pointer;font:inherit;}
+html body dialog.pro-replays button.button:hover:not(:disabled) {background-image:linear-gradient(180deg,var(--replays-button-hover-top),var(--replays-button-hover-bottom))!important;border-color:var(--replays-accent)!important;}
+html body dialog.pro-replays header button.button {font-size:20px;}
+.pro-replays .button:disabled {opacity:.5;cursor:default;}
+.pro-replays :is(button,input,select,a):focus-visible {outline:2px solid var(--replays-accent)!important;outline-offset:2px;}
+.pro-replays-filters {display:grid;grid-template-columns:1.2fr 1fr 130px;gap:12px;}
+.pro-replays-actions {display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+.pro-replays-status {color:var(--replays-muted);}
+.pro-replays-results {display:grid;gap:8px;}
+html body dialog.pro-replays .pro-replay-result {display:flex;flex-direction:column;gap:5px;padding:12px 14px;border:1px solid var(--replays-border);border-radius:8px;background:var(--replays-card)!important;color:var(--replays-text)!important;text-decoration:none;overflow-wrap:anywhere;}
+html body dialog.pro-replays .pro-replay-result:hover {background:var(--replays-hover)!important;border-color:var(--replays-accent);}
+.pro-replays .pro-replay-result small {color:var(--replays-muted);}
+.pro-replays .pro-replay-result strong {color:inherit!important;font-size:15px;}
+.pro-replays nav {display:flex;align-items:center;justify-content:center;gap:16px;margin-top:18px;}
+.pro-replays [hidden] {display:none!important;}
+.pro-replays h3 {color:inherit;font-size:18px;margin:18px 0 12px;}
+.pro-replays-visibility {display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:14px 0 0;padding:0;border:0;}
+.pro-replays-visibility legend {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);}
+.pro-replays-visibility label {display:inline-flex;flex-direction:row;align-items:center;gap:5px;font-weight:400;}
+.pro-replays-visibility input {accent-color:var(--replays-accent);}
+.pro-replays-account {flex-basis:100%;color:var(--replays-muted);}
+.pro-replays-account:empty {display:none;}
+.pro-replays .textbox[readonly] {opacity:.8;}
+[data-pro-replay] :is(button[name="saveReplay"],button[name="uploadReplay"],button[name="closeAndRematch"],button[data-cmd="/savereplay"],.battle-log-add,.chat-log-add) {display:none!important;}
+/* Offline replay rooms have no chat input to reserve a footer for. */
+.ps-room[data-pro-replay="true"]:not(.pro-theater-room) .battle-log {bottom:0!important;}
+@media(max-width:650px){.pro-replays-filters{grid-template-columns:1fr;}.pro-replays form:first-of-type{flex-direction:column;align-items:stretch;}}

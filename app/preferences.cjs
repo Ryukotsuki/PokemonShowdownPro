@@ -1,17 +1,28 @@
 const fs = require('node:fs');
+const theaterLayout = require('./theater-layout.cjs');
 const path = require('node:path');
 const { addonDefaults } = require('./addon-catalog.cjs');
 const { validZoomPercent } = require('./client-zoom.cjs');
 const messageDefaults = { startEnabled: false, startText: '', endEnabled: false, endText: '' };
 const sidebarTabs = ['battle', 'addons', 'messages', 'history'];
-const defaults = { autoStartTimer: false, saveWinningReplays: false, saveLosingReplays: false, showdexEnabled: true, autoUpdateAddons: true, autoUpdateApp: true, clientZoomPercent: 100, showdexZoomPercent: 100, recentReplays: [], sidebarCollapsed: false, sidebarTab: 'battle', messages: messageDefaults, addons: addonDefaults };
+const defaults = { theaterLayout: {...theaterLayout.defaults}, streamerEnabled: false, streamerShowHub: false, streamerShowShowdex: false, streamerShowMoves: false, streamerShowPokemonTooltips: false, streamerShowTeras: false, autoStartTimer: false, saveWinningReplays: false, saveLosingReplays: false, showdexEnabled: true, autoUpdateAddons: true, autoUpdateApp: true, clientZoomPercent: 100, showdexZoomPercent: 100, recentReplays: [], sidebarCollapsed: false, sidebarTab: 'battle', messages: messageDefaults, addons: addonDefaults };
 const validMessageText = text => typeof text === 'string' && text.length <= 280 && !/[\x00-\x1f\x7f\u0085\u2028\u2029]/.test(text) && !text.trimStart().startsWith('/');
 const validMessages = value => value && ['start','end'].every(phase => typeof value[phase+'Enabled'] === 'boolean' && validMessageText(value[phase+'Text']) && (!value[phase+'Enabled'] || !!value[phase+'Text'].trim()));
 const shouldUploadReplay = (settings, outcome) => outcome === 'win' ? settings.saveWinningReplays === true : outcome === 'loss' ? settings.saveLosingReplays === true : false;
 const replayUrl = url => typeof url === 'string' && /^https:\/\/replay\.pokemonshowdown\.com\/[a-z0-9-]+$/.test(url);
+// Read pre-1.2.0 keys once on load; only the Streamer names are written back.
+// An explicit new value, including false or an invalid value, wins over legacy.
+const streamerFlag = (saved, key) => (Object.hasOwn(saved, key) ? saved[key] : saved[key === 'streamerEnabled' ? 'privacyMode' : key.replace(/^streamer/, 'privacy')]) === true;
 function normalize(saved = {}) {
   if (!saved || typeof saved !== 'object') saved = {};
   return {
+    theaterLayout: theaterLayout.normalize(saved.theaterLayout),
+    streamerEnabled: streamerFlag(saved, 'streamerEnabled'),
+    streamerShowHub: streamerFlag(saved, 'streamerShowHub'),
+    streamerShowShowdex: streamerFlag(saved, 'streamerShowShowdex'),
+    streamerShowMoves: streamerFlag(saved, 'streamerShowMoves'),
+    streamerShowPokemonTooltips: streamerFlag(saved, 'streamerShowPokemonTooltips'),
+    streamerShowTeras: streamerFlag(saved, 'streamerShowTeras'),
     autoStartTimer: saved.autoStartTimer === true,
     saveWinningReplays: saved.saveWinningReplays === true,
     saveLosingReplays: saved.saveLosingReplays === true,

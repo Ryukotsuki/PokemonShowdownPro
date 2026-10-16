@@ -3,12 +3,14 @@ require('./mute-test-audio.cjs');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {BrowserAddons}=require('../app/browser-addons.cjs');
 const {addonDefaults}=require('../app/addon-catalog.cjs');
+const {loadAuditClient,isolateAuditNetwork}=require('./audit-client.cjs');
 const root=path.resolve(__dirname,'..'),out=path.join(root,'test-results/tera-notices');
 app.setPath('userData',path.join(out,'profile'));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
   fs.mkdirSync(out,{recursive:true});
   const ses=session.fromPartition('persist:tera-notices'),manager=new BrowserAddons(root,ses);
+  isolateAuditNetwork(ses);
   await manager.apply({...Object.fromEntries(Object.keys(addonDefaults).map(key=>[key,false])),didItTera:true});
   const settings=new BrowserWindow({show:false,webPreferences:{session:ses}});
   const options=async values=>{await settings.loadURL(manager.optionsUrl('didItTera'));await settings.webContents.executeJavaScript(`chrome.storage.local.set(${JSON.stringify(values)})`);};
@@ -22,7 +24,7 @@ app.whenReady().then(async()=>{
   for(const version of ['old','new']) {
     await options({ditShowBothUserTera:true,ditShowNicknames:false,ditFontSize:11});
     await settings.webContents.executeJavaScript("chrome.storage.local.remove('ditTextColor')");
-    await wc.loadURL('https://play.pokemonshowdown.com/'+(version==='old'?'oldclient':'newclient'));
+    await loadAuditClient(wc,'https://play.pokemonshowdown.com/'+(version==='old'?'oldclient':'newclient'));
     const host=version==='old'?'app':'PS';
     await wait(version==='old'?'window.app?.socket?.readyState===1 && window.OptionsPopup':'window.PS?.connection?.connected && window.PS?.prefs');
     await run(`window.__teraAuditSends=[];${version==='old'?'app.socket.send':'PS.connection.send'}=data=>__teraAuditSends.push(data);${version==='old'?"Storage.prefs('autotimer',false);":"PS.prefs.set('autotimer',false);"}`);
@@ -44,13 +46,22 @@ app.whenReady().then(async()=>{
     const names=await run(`return [...document.querySelectorAll('#room-${id} .ditPokemonName')].map(e=>e.textContent).sort();`);
     fs.writeFileSync(path.join(out,version+'-names.json'),JSON.stringify(await run(`const room=document.getElementById('room-${id}');return {cards:[...room.querySelectorAll('.ditTeraInfo')].map(e=>e.outerHTML),icons:[...room.querySelectorAll('.picon[aria-label]')].map(e=>e.getAttribute('aria-label')),log:[...room.querySelectorAll('.battle-history')].map(e=>e.innerText)};`),null,2));
     assert.deepEqual(names,['Charizard','Vaporeon']);
+    // Process Tera in another battle while its native tab is hidden.
+    assert.equal(await run(`return document.querySelector('#room-${other} .trainer').offsetHeight;`),0);
+    await run(`${host}.receive(${JSON.stringify('>'+other+'\n|-terastallize|p2a: Fish|Ghost\n|-terastallize|p1a: Cinder (friend)|Fire')});${host}.rooms[${JSON.stringify(other)}].battle.seekTurn(Infinity);`);
+    await wait(`document.querySelectorAll('#room-${other} .ditTeraInfo').length===2`);
+    await run(`${host}.focusRoom(${JSON.stringify(other)});`);await pause(150);
+    const background=await run(`const room=document.getElementById('room-${other}');return [...room.querySelectorAll('.ditTeraInfo')].map(card=>{const trainer=room.querySelector(card.dataset.side==='you'?'.leftbar .trainer':'.rightbar .trainer');return {side:card.dataset.side,offset:parseFloat(getComputedStyle(card)[card.dataset.side==='you'?'bottom':'top']),expected:trainer.offsetHeight+45};});`);
+    for(const card of background)assert.ok(Math.abs(card.offset-card.expected)<1,version+' background Tera placement after returning: '+JSON.stringify(card));
+    await run(`${host}.focusRoom(${JSON.stringify(id)});`);
     const cards=[];
     for(const selected of ['pro','light','dark']) {
       await theme(selected);
       for(const width of [1100,680,430]) {
         win.setContentSize(width,800);await pause(150);
-        const appearance=await run(`const room=document.getElementById('room-${id}'),battle=room.querySelector('.innerbattle').getBoundingClientRect();return [...room.querySelectorAll('.ditTeraInfo')].map(e=>{const r=e.getBoundingClientRect(),close=e.querySelector('button').getBoundingClientRect(),s=getComputedStyle(e),bar=room.querySelector(e.dataset.side===\"you\"?\".leftbar\":\".rightbar\").getBoundingClientRect();return {sidebarInside:r.left>=bar.left-1&&r.right<=bar.right+1,name:e.querySelector('.ditPokemonName').textContent,background:s.backgroundImage,border:s.borderTopColor,color:s.color,font:s.fontSize,width:r.width,inside:r.left>=battle.left-1&&r.right<=battle.right+1&&r.top>=battle.top-1&&r.bottom<=battle.bottom+1,closeInside:close.left>=r.left-1&&close.right<=r.right+1&&close.top>=r.top-1&&close.bottom<=r.bottom+1};});`);
+        const appearance=await run(`const room=document.getElementById('room-${id}'),battle=room.querySelector('.innerbattle').getBoundingClientRect();return [...room.querySelectorAll('.ditTeraInfo')].map(e=>{const r=e.getBoundingClientRect(),close=e.querySelector('button').getBoundingClientRect(),s=getComputedStyle(e),sidebar=room.querySelector(e.dataset.side===\"you\"?\".leftbar\":\".rightbar\"),bar=sidebar.getBoundingClientRect();return {offset:parseFloat(s[e.dataset.side==='you'?'bottom':'top']),expected:sidebar.querySelector('.trainer').offsetHeight+45,sidebarInside:r.left>=bar.left-1&&r.right<=bar.right+1,name:e.querySelector('.ditPokemonName').textContent,background:s.backgroundImage,border:s.borderTopColor,color:s.color,font:s.fontSize,width:r.width,inside:r.left>=battle.left-1&&r.right<=battle.right+1&&r.top>=battle.top-1&&r.bottom<=battle.bottom+1,closeInside:close.left>=r.left-1&&close.right<=r.right+1&&close.top>=r.top-1&&close.bottom<=r.bottom+1};});`);
         for(const card of appearance) {
+          assert.ok(Math.abs(card.offset-card.expected)<1,'Tera placement follows the current trainer layout at '+width);
           assert.equal(card.inside,true,version+' '+selected+' card bounds at '+width);
           assert.equal(card.background.includes('gradient'),selected==='pro');
           if(selected==='pro'){assert.equal(card.sidebarInside,true,'Tera card stays inside its trainer sidebar');assert.equal(card.closeInside,true);assert.equal(card.border,'rgb(82, 123, 148)');}
@@ -98,7 +109,7 @@ app.whenReady().then(async()=>{
       await capture('new-expired-room.png');
     }
     report.push({version,names,cards,notices});
-    console.log(version+': species names, both-player cards, dismissal, palettes, notice wrapping and narrow battle bounds passed');
+    console.log(version+': background-tab Tera placement, resize, species names, both-player cards, dismissal, palettes, notice wrapping and narrow battle bounds passed');
   }
   settings.close();fs.writeFileSync(path.join(out,'report.json'),JSON.stringify(report,null,2));
   win.close();app.exit(0);

@@ -31,11 +31,17 @@
 - ⚔️ **Battle Hub**<br>
   Manage active matches, add-ons, messages, results, and replay links from one collapsible panel. Toggle fullscreen from the Hub or with **F11**.
 
+- 🛡️ **Streamer Mode**<br>
+  Share a separate battle window in OBS or Discord while keeping your move choices, switch controls, and Showdex visible in your main window.
+
 - 🧩 **Six Included Add-ons**<br>
   Get richer tooltips, random battle set information, PokéPaste previews, Tera reminders, battle records, and team sheet exporting.
 
 - 📊 **Battle History & Replay Tools**<br>
   Review saved battles, rating charts, Pokémon statistics, favorites, and filters. Optionally upload winning or losing replays and access confirmed links from the Hub.
+
+- ▶️ **In-app Replays**<br>
+  Open **Home → Replays** to search the official replay service or paste a replay link. Watch in native battle tabs with Showdex, playback controls and Theater Mode. Saved replay links open inside Pro too.
 
 - 💬 **Match Messages**<br>
   Set your own optional greeting and closing message for battles you play.
@@ -90,7 +96,7 @@ The **new client** and **Pro theme** are selected by default on a fresh setup. A
 
 | Tab | What you'll find |
 | --- | --- |
-| **Battle** | Active matches, the Showdex switch, an optional automatic battle timer, and winning/losing replay upload settings. |
+| **Battle** | Active matches, the Showdex switch, Streamer Mode, an optional automatic battle timer, and winning/losing replay upload settings. |
 | **Add-ons** | Individual add-on switches, settings windows, Battle History, and app/add-on update controls. |
 | **Messages** | Optional greeting and closing messages that you write yourself. |
 | **History** | Session and all-time win/loss/tie records, plus your 20 most recent confirmed replay uploads. |
@@ -98,6 +104,16 @@ The **new client** and **Pro theme** are selected by default on a fresh setup. A
 ### 🎮 Set Up Your Battles
 
 Open **Battle → Match flow** to enable the automatic timer or choose which results should upload replays. Confirmed replay links appear in **History** after the upload finishes.
+
+### 🛡️ Stream Your Battle
+
+Open **Battle → Streamer Mode** and choose **Open stream window**. In OBS or Discord, capture **Showdown Pro Stream**. This window mirrors the whole main app, including chat rooms, Teambuilder, navigation, themes, zoom and battle animations.
+
+Use **Show Battle Hub**, **Show Showdex**, **Show moves and switches**, **Show Pokémon tooltips**, and **Show sidebar Teras** to choose what viewers see. All five start off and your choices are saved. Unchecked items are covered in the stream; your main window stays fully usable. Hellodex and Calcdex navigation tabs stay visible. Pokémon hover details follow their own switch, independently of moves and Showdex. Other visible app content is mirrored normally. The stream is a read-only view and starts at the main view’s size and fills its window without added margins. Streamer Mode targets 60 fps. Only changed image regions are transferred, and capture overlaps frame processing to keep updates current.
+
+On Windows, the stream’s title-bar minimize button sends it behind the main client while its picture keeps running. Native Windows minimization is disabled to preserve the capture surface. Use its taskbar button or **Show stream window** to bring it back.
+
+Share the stream window specifically: capturing your entire screen or main window still shows your controls.
 
 ### 🧩 Choose Your Tools
 
@@ -109,7 +125,7 @@ Open **Add-ons** to enable or disable individual tools and adjust their settings
 - **Classic client:** Settings → Graphics → Theme → **Pro**
 - **Showdex:** Settings → Color Mode → **Pro**
 
-Showdex's theme can be selected independently. Existing theme choices are preserved.
+Showdex defaults to **Showdown**, which follows the client's Light, Dark, or Pro theme. Its theme can also be selected independently. Existing theme choices are preserved.
 
 ---
 
@@ -259,3 +275,7 @@ Pokémon Showdown Pro is an independent fan-made project. It is not affiliated w
 Licensed under [AGPL-3.0-or-later](LICENSE). Third-party code and assets retain their respective licenses and ownership.
 
 ---
+
+## Theater Mode
+
+Click the expand icon immediately left of the battle timer, or press **Ctrl+Shift+T**, to enter Theater Mode for the selected battle. It fills the battle stage while keeping move and replay controls at their normal Pro size, hides navigation and Battle Hub, and places chat and full Calcdex in a resizable right column. Collapsing them creates narrow vertical edge tabs and reclaims battle space. The docked calculator includes sets, ability/nature/item, IVs/EVs, stats, stages and field controls; enlarge it for more space. Click the restore icon or press **Esc** to return; Escape leaves open dialogs and text entry alone. Utility width, panel split and collapse states are saved; startup remains in normal mode and existing zoom preferences are unchanged.

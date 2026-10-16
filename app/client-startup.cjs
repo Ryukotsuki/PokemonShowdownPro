@@ -2,7 +2,7 @@ const fs = require('node:fs');
 // webContents.executeJavaScript waits for every page resource. A ready main
 // frame can initialize the local bridge and Showdex while images/ads still load.
 async function installClientScripts({contents,clientURL,bridge,themeScript,themeCSS,autoTimer,
-  getBundle,isCurrent=()=>true,onClientReady=()=>{}}) {
+  theaterScript,replayScript,getBundle,isCurrent=()=>true,onClientReady=()=>{}}) {
   const frame = contents.mainFrame;
   const current = () => !contents.isDestroyed() && !frame.isDestroyed() && isCurrent();
   const execute = async source => {
@@ -31,6 +31,8 @@ async function installClientScripts({contents,clientURL,bridge,themeScript,theme
         style.textContent = ${JSON.stringify(themeCSS)};
         return !!style.sheet;
       })()`);
+      if(theaterScript)await execute(theaterScript);
+      if(replayScript)await execute(replayScript);
       onClientReady();
       const bundle = getBundle();
       if (!bundle) return {showdex:false};

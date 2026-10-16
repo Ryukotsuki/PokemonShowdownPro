@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
 const { Battles } = require('./battles.cjs');
 const {fetchReplayOutcome}=require('./replay-outcomes.cjs');
+const {replayTarget,searchReplays,loadReplay,replayAccount}=require('./replays.cjs');
 const { defaults, replayUrl, validMessages, sidebarTabs, shouldUploadReplay, loadPreferences, savePreferences, addReplay } = require('./preferences.cjs');
 const { addons: addonCatalog } = require('./addon-catalog.cjs');
 const { BrowserAddons } = require('./browser-addons.cjs');
@@ -13,6 +14,9 @@ const { AppUpdates } = require('./app-updates.cjs');
 const { prepareUpdates } = require('./update-process.cjs');
 const { BattleMessages } = require('./battle-messages.cjs');
 const { createHubTooltip } = require('./hub-tooltip.cjs');
+const { StreamerStream } = require('./streamer-mode.cjs');
+let theaterActive=false;
+let streamerStream, streamerJob = Promise.resolve();
 const { emptyRecord, loadRecord, saveRecord, recordBattle } = require('./win-loss.cjs');
 const root = path.resolve(__dirname, '..');
 const appVersion = app.getVersion();
@@ -84,7 +88,7 @@ async function refreshReplayOutcomes() {
   await replayOutcomeJob;
 }
 function state() {
-  return { appVersion, theme, showdexStatus, clientStatus, postMatchStatus, messageStatus, recentReplays:preferences.recentReplays, replayOutcomePending:[...replayOutcomePending], ui:{collapsed:preferences.sidebarCollapsed,tab:preferences.sidebarTab,fullscreen:!!window?.isFullScreen()}, appUpdates:appUpdates?.snapshot(), addonUpdates:addonUpdates?.snapshot(), addons:browserAddons?.snapshot(preferences.addons)||[], reloadPending:preferences.showdexEnabled!==appliedShowdex || !!browserAddons?.pending(preferences.addons), statisticsError, statistics: { allTime: lifetimeRecord.allTime, session: sessionRecord }, settings:{...preferences}, rooms: [...battles.rooms.values()].reverse().filter(room => !room.ended).map(room => ({
+  return { appVersion, theme, showdexStatus, clientStatus, postMatchStatus, messageStatus, recentReplays:preferences.recentReplays, replayOutcomePending:[...replayOutcomePending], ui:{collapsed:preferences.sidebarCollapsed,tab:preferences.sidebarTab,fullscreen:!!window?.isFullScreen(),streamerWindowOpen:!!streamerStream?.window&&!streamerStream.window.isDestroyed()}, appUpdates:appUpdates?.snapshot(), addonUpdates:addonUpdates?.snapshot(), addons:browserAddons?.snapshot(preferences.addons)||[], reloadPending:preferences.showdexEnabled!==appliedShowdex || !!browserAddons?.pending(preferences.addons), statisticsError, statistics: { allTime: lifetimeRecord.allTime, session: sessionRecord }, settings:{...preferences}, rooms: [...battles.rooms.values()].reverse().filter(room => !room.ended).map(room => ({
     id: room.id, title: room.title || room.id, turn: room.turn, status: room.status,
   })) };
 }
@@ -93,14 +97,38 @@ function layout() {
   if(!window || !client) return;
   hubTooltip?.hide();
   const [width,height]=window.getContentSize();
-  client.setBounds({x:0,y:0,width:width-(preferences.sidebarCollapsed ? 48 : SIDEBAR_WIDTH),height});
+  client.setBounds({x:0,y:0,width:theaterActive?width:width-(preferences.sidebarCollapsed ? 48 : SIDEBAR_WIDTH),height});
 }
 function finishedStatus(room, message, version) {
   room.status = message;
   if (postMatchStatusVersion === version) { postMatchRoomId = room.id; postMatchStatus = `${room.title || room.id}: ${message}`; }
   publish();
 }
+function setStreamerMode(enabled) {
+  if(typeof enabled!=='boolean')throw new Error('Invalid Streamer mode setting.');
+  const change=async()=>{
+    const previous=preferences.streamerEnabled;
+    preferences.streamerEnabled=enabled;
+    try {
+      savePreferences(preferencesFile,preferences);
+      if(enabled)await streamerStream.open();else streamerStream.destroy();
+      publish();return state();
+    } catch(error){
+      preferences.streamerEnabled=previous;
+      savePreferences(preferencesFile,preferences);
+      publish();throw error;
+    }
+  };
+  const job=streamerJob.then(change);streamerJob=job.catch(()=>{});return job;
+}
 function setSetting(key, value) {
+  if(key==='streamerEnabled')return setStreamerMode(value);
+  if(['streamerShowHub','streamerShowShowdex','streamerShowMoves','streamerShowPokemonTooltips','streamerShowTeras'].includes(key)){
+    if(typeof value!=='boolean')throw new Error('Invalid stream visibility setting.');
+    const previous=preferences[key];preferences[key]=value;
+    try{savePreferences(preferencesFile,preferences);}catch(error){preferences[key]=previous;throw error;}
+    streamerStream?.invalidate();publish();return state();
+  }
   if(typeof key!=='string')throw new Error('Invalid setting.');
   if(key==='showdexEnabled' || typeof key==='string' && key.startsWith('addon:')) {
     const addon=key.startsWith('addon:') ? key.slice(6) : null;
@@ -153,6 +181,12 @@ function processFinished(room) {
 }
 function trustedPanel(event) { return event.sender === window?.webContents && event.senderFrame === window.webContents.mainFrame; }
 function trustedClient(event) { return event.sender === client?.webContents && event.senderFrame === client.webContents.mainFrame && event.senderFrame.url.startsWith(CLIENT_URL); }
+ipcMain.handle('client:theater-layout',(event,value)=>{
+  if(!trustedClient(event))return null;
+  if(value!==undefined){if(!require('./theater-layout.cjs').valid(value))throw Error('Invalid Theater layout.');const previous=preferences.theaterLayout;preferences.theaterLayout={...value};try{savePreferences(preferencesFile,preferences);}catch(error){preferences.theaterLayout=previous;throw error;}}
+  return {...preferences.theaterLayout};
+});
+ipcMain.on('client:theater-active',(event,id)=>{if(trustedClient(event)&&(id===null||typeof id==='string'&&/^battle-[a-z0-9-]+$/.test(id))){theaterActive=id!==null;hubTooltip?.hide();layout();}});
 function toggleFullscreen() {
   if(window&&!window.isDestroyed()){hubTooltip?.hide();window.setFullScreen(!window.isFullScreen());publish();}
   return state();
@@ -175,10 +209,11 @@ app.on('web-contents-created',(_event,contents)=>require('./window-shortcuts.cjs
   toggleFullscreen,
   zoom:action=>shortcutZoom(action,contents===client?.webContents?clientZoomTarget:'showdown'),
   canZoom:()=>contents===window?.webContents||contents===client?.webContents,
-  reload:()=>{if(client&&!client.webContents.isDestroyed())void reloadClient();},
+  reload:()=>{if(client&&!client.webContents.isDestroyed())void reloadClient().catch(error=>console.error('Reload:',error.message));},
   devTools:()=>client?.webContents.openDevTools({mode:'detach'}),
   quit:()=>app.quit(),
 }));
+ipcMain.handle('panel:streamer-open',event=>trustedPanel(event)?setStreamerMode(true):null);
 ipcMain.handle('panel:fullscreen',event=>trustedPanel(event)?toggleFullscreen():null);
 ipcMain.handle('panel:zoom', (event,action,target)=>trustedPanel(event)?setClientZoom(action,target):null);
 ipcMain.handle('client:zoom-state',event=>trustedClient(event)?{clientZoomPercent:preferences.clientZoomPercent,showdexZoomPercent:preferences.showdexZoomPercent,css:require('./client-zoom.cjs').showdexZoomCSS}:null);
@@ -191,7 +226,10 @@ ipcMain.handle('panel:check-updates', async event => {if(trustedPanel(event)){aw
 ipcMain.handle('panel:setting', (event, key, value) => { if (trustedPanel(event)) return setSetting(key, value); });
 async function reloadClient() {
   if(reloadJob)return reloadJob;
-  reloadJob=(async()=>{for(const popup of addonWindows)popup.close();await browserAddons.apply(preferences.addons);appliedShowdex=preferences.showdexEnabled;client.webContents.reload();publish();})().finally(()=>{reloadJob=null;});
+  reloadJob=(async()=>{
+    const result=await require('./client-reload.cjs').reloadShowdown(client.webContents,{prepare:async()=>{for(const popup of addonWindows)popup.close();await browserAddons.apply(preferences.addons);appliedShowdex=preferences.showdexEnabled;}});
+    if(result)clientStatus=result.needsLogin?'Sign in to restore your battles':'Official Showdown client connected';publish();return result;
+  })().catch(error=>{clientStatus=error.message;publish();throw error;}).finally(()=>{reloadJob=null;});
   return reloadJob;
 }
 ipcMain.handle('panel:reload', event => { if (trustedPanel(event)) return reloadClient(); });
@@ -216,10 +254,13 @@ ipcMain.handle('panel:focus', async (event,id) => {
   const focused=await client.webContents.executeJavaScript(`window.__showdownPro?.focusBattle(${JSON.stringify(id)})`);
   if(focused) client.webContents.focus();return !!focused;
 });
-ipcMain.handle('panel:replay', (event,url,copy) => {
+ipcMain.handle('panel:replay', async (event,url,copy) => {
   if(!trustedPanel(event) || !replayUrl(url) || !preferences.recentReplays.some(replay=>replay.url===url)) throw new Error('Saved replay unavailable.');
-  if(copy===true) clipboard.writeText(url);else external(url);
+  if(copy===true) clipboard.writeText(url);else await openClientReplay(url);
 });
+ipcMain.handle('client:replay-account',event=>{if(!trustedClient(event))throw Error('Replay account unavailable.');return replayAccount((url,options)=>clientSession.fetch(url,options));});
+ipcMain.handle('client:replay-search',(event,query)=>{if(!trustedClient(event))throw Error('Replay search unavailable.');return searchReplays(query,(url,options)=>clientSession.fetch(url,options));});
+ipcMain.handle('client:replay-load',(event,url)=>{if(!trustedClient(event))throw Error('Replay unavailable.');return loadReplay(url,(target,options)=>clientSession.fetch(target,options));});
 ipcMain.on('client:receive', (event, data) => { if (trustedClient(event)) {battles.receive(data);if(!updatesIdle())addonUpdates?.cancel();} });
 ipcMain.on('client:sent', (event, room, command) => { if (trustedClient(event)) battles.sent(room, command); });
 // Preload requests local CSS before slow page resources finish loading.
@@ -241,7 +282,14 @@ battles.on('room', room => {
 });
 battles.on('change', publish);
 
+async function openClientReplay(url) {
+  if(!client||client.webContents.isDestroyed())return;
+  const action=replayTarget(url)?`open(${JSON.stringify(url)})`:'show()';
+  await client.webContents.executeJavaScript(`window.__showdownProReplays?.${action}`);
+  window?.show();window?.focus();client.webContents.focus();
+}
 function external(url) {
+  try {const parsed=new URL(url);if(replayTarget(url)||parsed.origin==='https://replay.pokemonshowdown.com'&&parsed.pathname==='/'){void openClientReplay(url).catch(error=>console.error('Replay:',error.message));return;}}catch{}
   try { if (['https:', 'http:'].includes(new URL(url).protocol)) void shell.openExternal(url); } catch { /* invalid URL */ }
 }
 function companionUrl(url) {
@@ -278,7 +326,7 @@ async function openAddonWindow(url) {
 }
 async function assets(request) {
   const url = new URL(request.url);
-  const base = url.hostname === 'showdex' ? addonUpdates?.installed('showdex',path.join(root,'build/showdex'))||path.join(root,'build/showdex') : url.hostname === 'app' ? path.join(root, 'app/panel') : url.hostname === 'assets' ? path.join(__dirname, 'assets') : null;
+  const base = url.hostname === 'showdex' ? addonUpdates?.installed('showdex',path.join(root,'build/showdex'))||path.join(root,'build/showdex') : url.hostname === 'stream' ? path.join(root, 'app/stream') : url.hostname === 'app' ? path.join(root, 'app/panel') : url.hostname === 'assets' ? path.join(__dirname, 'assets') : null;
   if (!base) return new Response('Not found', { status: 404 });
   let target;
   try { target = path.resolve(base, '.' + decodeURIComponent(url.pathname)); } catch { return new Response('', { status: 400 }); }
@@ -296,7 +344,7 @@ async function installClient() {
     contents:client.webContents, clientURL:CLIENT_URL,
     bridge:fs.readFileSync(path.join(__dirname,'client-bridge.js'),'utf8'),
     themeScript:fs.readFileSync(path.join(__dirname,'client-theme.js'),'utf8'),
-    themeCSS:require('./client-theme-css.cjs'), autoTimer:preferences.autoStartTimer,
+    themeCSS:require('./client-theme-css.cjs')+'\n'+fs.readFileSync(path.join(__dirname,'theater-mode.css'),'utf8')+'\n'+fs.readFileSync(path.join(__dirname,'client-replays.css'),'utf8'), theaterScript:fs.readFileSync(path.join(__dirname,'theater-mode.js'),'utf8'), replayScript:fs.readFileSync(path.join(__dirname,'client-replays.js'),'utf8'), autoTimer:preferences.autoStartTimer,
     isCurrent:()=>version===navigationVersion && !closing,
     onClientReady:()=>{
       clientStatus='Official Showdown client connected';publish();
@@ -343,6 +391,7 @@ async function createWindow() {
   else addonUpdates.confirm('addons');
   session.defaultSession.protocol.handle('showdown-pro', assets);
   clientSession.protocol.handle('showdown-pro', assets);
+  session.fromPartition('pro-streamer-stream').protocol.handle('showdown-pro',assets);
   for (const ses of [session.defaultSession, clientSession]) {
     require('./client-permissions.cjs').installClientPermissions(ses, () => client?.webContents);
   }
@@ -366,14 +415,14 @@ async function createWindow() {
   window.on('resize', layout);
   for(const event of ['enter-full-screen','leave-full-screen'])window.on(event,()=>setImmediate(()=>{layout();publish();}));
   layout();
-  window.on('closed', () => { closing = true; navigationVersion++; hubTooltip?.destroy(); if (!client.webContents.isDestroyed()) client.webContents.close(); window = null; });
+  window.on('closed', () => { streamerStream?.destroy(); closing = true; navigationVersion++; hubTooltip?.destroy(); if (!client.webContents.isDestroyed()) client.webContents.close(); window = null; });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
   client.webContents.setWindowOpenHandler(({ url }) => { if(companionUrl(url))void openAddonWindow(url).catch(error=>console.error('Add-on page:',error.message));else external(url);return { action: 'deny' }; });
   client.webContents.on('will-navigate', (event, url) => { if (new URL(url).origin !== new URL(CLIENT_URL).origin) { event.preventDefault(); external(url); } });
   client.webContents.on('did-start-navigation', (_event, _url, inPlace, mainFrame) => {
     if (!mainFrame || inPlace) return;
-    navigationVersion++; postMatchStatus = null; postMatchRoomId = null; postMatchStatusVersion++; battles.reset(); showdexStatus = appliedShowdex ? 'Loading…' : 'Disabled'; clientStatus = 'Connecting…'; publish();
+    navigationVersion++;theaterActive=false;layout(); postMatchStatus = null; postMatchRoomId = null; postMatchStatusVersion++; battles.reset(); showdexStatus = appliedShowdex ? 'Loading…' : 'Disabled'; clientStatus = 'Connecting…'; publish();
   });
   client.webContents.on('dom-ready', () => { installClient().catch(error => { clientStatus = error.message; publish(); }); });
   client.webContents.on('did-fail-load', (_event, code, description, _url, mainFrame) => {
@@ -383,6 +432,11 @@ async function createWindow() {
   await window.loadURL('showdown-pro://app/index.html');
   window.contentView.addChildView(client);
   client.setVisible(true);
+  streamerStream=new StreamerStream({createWindow:options=>new BrowserWindow(options),contents:()=>client?.webContents,size:()=>client?.getBounds(),backgroundWindow:()=>window,theme:()=>theme,icon:appIcon,visible:!smoke,
+    visibility:()=>({hub:preferences.streamerShowHub,showdex:preferences.streamerShowShowdex,moves:preferences.streamerShowMoves,tooltips:preferences.streamerShowPokemonTooltips,teras:preferences.streamerShowTeras}),
+    hub:()=>{const [width,height]=window.getContentSize(),bounds=client.getBounds();return {contents:window.webContents,x:bounds.width,width:width-bounds.width,height};},
+    onClose:()=>{preferences.streamerEnabled=false;try{savePreferences(preferencesFile,preferences);}catch(error){console.error('Streamer mode:',error.message);}publish();}});
+  if(!smoke&&preferences.streamerEnabled)await streamerStream.open();
   hubTooltip = await createHubTooltip(window);
   client.webContents.on('focus', () => hubTooltip?.hide());
   layout();
@@ -410,6 +464,22 @@ async function createWindow() {
       throw new Error('Smoke test timed out: ' + JSON.stringify(state()));
     };
     await waitFor(() => showdexStatus === 'Showdex loaded');
+    if(process.argv.includes('--reload-only')) {
+      await require('../scripts/audit-reload-battle.cjs')({window,client,state,waitFor});
+      app.exit(0);return;
+    }
+    if(process.argv.includes('--replays-only')) {
+      await require('../scripts/audit-replays-hub.cjs')({window,client,state,waitFor});
+      app.exit(0);return;
+    }
+    if(process.argv.includes('--theater-only')) {
+      await require('../scripts/audit-theater-hub.cjs')({window,client,state,waitFor,preferencesFile,getMirror:()=>streamerStream});
+      app.exit(0);return;
+    }
+    if(process.argv.includes('--streamer-only')) {
+      await require('../scripts/audit-streamer-hub.cjs')({window,root,state,waitFor,getStream:()=>streamerStream.window,getMirror:()=>streamerStream,preferencesFile});
+      app.exit(0);return;
+    }
     if(process.argv.includes('--startup-only')) {
       await require('../scripts/audit-startup-defaults.cjs')({window,client,state,waitFor});
       app.exit(0);return;
@@ -491,5 +561,5 @@ const primaryInstance = !app.isPackaged || smoke || verifyRelease || app.request
 if (primaryInstance) app.whenReady().then(createWindow).catch(error => { console.error(error); app.exit(1); });
 else app.quit();
 app.on('second-instance', () => { if (window) { if (window.isMinimized()) window.restore(); window.show(); window.focus(); } });
-app.on('before-quit', () => { clearInterval(updateTimer);clearInterval(appUpdateTimer);appUpdates?.stop();addonUpdates?.stop(); closing = true; navigationVersion++; });
+app.on('before-quit', () => { streamerStream?.destroy(); clearInterval(updateTimer);clearInterval(appUpdateTimer);appUpdates?.stop();addonUpdates?.stop(); closing = true; navigationVersion++; });
 app.on('window-all-closed', () => app.quit());

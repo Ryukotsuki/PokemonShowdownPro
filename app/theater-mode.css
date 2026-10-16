@@ -1,0 +1,289 @@
+/* Share Pro's doubles spacing with native Light/Dark, in either view. Slot
+   classes survive switches and viewpoint changes; centerstatbar excludes triples.
+   Keep these geometric rules outside the Pro palette's opt-in scope. */
+html:not(.showdown-pro) .battle [aria-label="Active Pokémon"]:has(.rightstatbar):not(:has(.centerstatbar)) .rstatbar.rightstatbar,
+html:not(.showdown-pro) .battle [aria-label="Active Pokémon"]:has(.rightstatbar):not(:has(.centerstatbar)) .lstatbar.leftstatbar { translate:0 28px; }
+html:not(.showdown-pro) .battle [aria-label="Active Pokémon"]:has(.rightstatbar):not(:has(.centerstatbar)) .statbar strong { margin:0 -4px; font-size:12px; line-height:16px; white-space:nowrap; }
+
+/* These Theater rules are opt-in. Native scene coordinates stay 640 x 360, exactly
+   like Showdown's own scale() path; weather and sprites share one scale. */
+.pro-theater-toggle { width:32px; min-height:27px; padding:3px 6px; margin:0 6px 0 0; vertical-align:top; }
+.timerbutton + .pro-theater-toggle { margin-left:6px; }
+.pro-theater-toggle.pro-theater-without-timer { float:right; position:relative; z-index:5; }
+[data-pro-theater-timer-flow="overlay"] button[name="toggleCalcdexOverlay"] { margin-right:44px !important; }
+html.pro-theater-active {
+ --pro-theater-surface:#f4f6f8; --pro-theater-border:#a8b3bd; --pro-theater-canvas:#e5e9ee; --pro-theater-text:#24313e;
+ --pro-theater-sidebar:#eef2f5dd; --pro-theater-muted:#5a6e7f; --pro-theater-accent:#31668a;
+ --pro-theater-button:#e9eff4; --pro-theater-button-hover:#d5e2ec; --pro-theater-thumb:#8395a6; --pro-theater-scheme:light;
+}
+/* Classic puts .dark on body; the new client also puts it on html. System
+   theme changes use the same native classes and update these colors live. */
+html.pro-theater-active:not(.showdown-pro):is(.dark,:has(body.dark)) {
+ --pro-theater-surface:#282c31; --pro-theater-border:#555e68; --pro-theater-canvas:#191c20; --pro-theater-text:#e4e8ed;
+ --pro-theater-sidebar:#20252be0; --pro-theater-muted:#aebdc9; --pro-theater-accent:#9ecbe8;
+ --pro-theater-button:#373f48; --pro-theater-button-hover:#46525f; --pro-theater-thumb:#697989; --pro-theater-scheme:dark;
+}
+html.pro-theater-active.showdown-pro {
+ --pro-theater-surface:#142b3b; --pro-theater-border:#47758e; --pro-theater-canvas:#0c1f2c; --pro-theater-text:#e7f4fc;
+ --pro-theater-sidebar:#112635c9; --pro-theater-muted:#aac8dc; --pro-theater-accent:#9bd6f2;
+ --pro-theater-button:#2b536c; --pro-theater-button-hover:#386c8a; --pro-theater-thumb:#4e809b; --pro-theater-scheme:dark;
+}
+html.pro-theater-active #header,
+html.pro-theater-active .ps-header,
+html.pro-theater-active [data-pro-theater-hidden] { display:none !important; }
+html.pro-theater-active body .ps-room.pro-theater-room {
+ position:fixed !important; inset:0 !important; width:100% !important; height:100% !important;
+ display:block !important; overflow:hidden !important; margin:0 !important; padding:0 !important;
+ background:var(--pro-theater-canvas) !important; color:var(--pro-theater-text) !important; color-scheme:var(--pro-theater-scheme); z-index:10;
+}
+html.pro-theater-active [data-pro-theater-part="battle-host"],
+html.pro-theater-active [data-pro-theater-part="controls-host"] {
+ position:static !important; width:auto !important; height:auto !important; overflow:visible !important; margin:0 !important;
+}
+html.pro-theater-active [data-pro-theater-part="battle"] {
+ display:block !important;
+ position:absolute !important; left:var(--pro-theater-battle-left) !important; top:var(--pro-theater-battle-top) !important;
+ width:var(--pro-theater-scene-width) !important; height:var(--pro-theater-scene-height) !important; transform:scale(var(--pro-theater-scale)) !important;
+ transform-origin:0 0 !important; margin:0 !important; border-radius:5px; overflow:hidden;
+}
+html.pro-theater-active [data-pro-theater-part="controls"] {
+ display:block !important;
+ position:absolute !important; left:8px !important; top:calc(var(--pro-theater-stage-height) + 16px) !important;
+ width:var(--pro-theater-main-width) !important; height:auto !important; min-height:72px; bottom:auto !important;
+ max-height:45vh !important; box-sizing:border-box; overflow:auto !important;
+ padding:8px !important; margin:0 !important; border:1px solid var(--pro-theater-border) !important;
+ border-radius:8px; background:var(--pro-theater-surface) !important; color:var(--pro-theater-text) !important;
+}
+html.pro-theater-active [data-pro-theater-part="battle-actions"] {
+ position:absolute !important; top:8px !important; right:8px !important; left:auto !important; width:auto !important; height:24px;
+ display:flex; align-items:center; justify-content:flex-end; margin:0 !important;
+ background:var(--pro-theater-surface); z-index:4;
+}
+html.pro-theater-active .pro-theater-room .battle-controls .timerbutton { top:4px !important; right:8px !important; }
+/* Keep Pro's native typography, button sizes and mechanics. Only wrap
+   menus where necessary; the controls never scale with the battlefield. */
+html.pro-theater-active .pro-theater-room .battle-controls .whatdo { padding-right:0; min-height:24px; }
+html.pro-theater-active .pro-theater-room :is(.inline-controls,.movecontrols,.switchcontrols,.targetcontrols,.teamcontrols) { max-width:640px !important; margin-left:0 !important; margin-right:0 !important; box-sizing:border-box; }
+html.pro-theater-active .pro-theater-room :is(.movemenu,.switchmenu) { display:flex !important; flex-wrap:wrap; gap:4px; max-width:640px !important; }
+html.pro-theater-active .pro-theater-room :is(.movemenu,.switchmenu) button { margin:0 !important; }
+html.pro-theater-active .pro-theater-room :is(.movemenu,.switchmenu) > div:empty { display:none; }
+html.pro-theater-active .pro-theater-room .overlay-controls { display:none !important; }
+html.pro-theater-active [data-pro-theater-part="log"] {
+ display:block !important;
+ opacity:1 !important;
+ position:absolute !important; left:var(--pro-theater-utility-left) !important; top:8px !important;
+ width:var(--pro-theater-utility-width) !important; height:calc(var(--pro-theater-chat-height) - 36px) !important;
+ right:auto !important; bottom:auto !important; box-sizing:border-box;
+ margin:0 !important; padding:40px 10px 10px !important; overflow-y:auto !important;
+ border:1px solid var(--pro-theater-border); border-radius:8px; background:var(--pro-theater-surface) !important; color:var(--pro-theater-text) !important;
+ font-size:13px !important;
+}
+html.pro-theater-active [data-pro-theater-part="chat-input"] {
+ display:block !important;
+ opacity:1 !important;
+ position:absolute !important; left:var(--pro-theater-utility-left) !important; top:calc(var(--pro-theater-chat-height) - 29px) !important;
+ bottom:auto !important; right:auto !important; width:var(--pro-theater-utility-width) !important;
+ height:36px; box-sizing:border-box; padding:4px 8px !important; z-index:2;
+}
+html.pro-theater-active [data-pro-theater-part="users"] {
+ opacity:1 !important; visibility:visible !important;
+ position:absolute !important; left:calc(var(--pro-theater-utility-left) + 8px) !important; top:14px !important;
+ right:auto !important; bottom:auto !important; width:calc(var(--pro-theater-utility-width) - 48px) !important;
+ max-height:28px; z-index:3;
+}
+html.pro-theater-active .pro-theater-room > .userlist,
+html.pro-theater-active .pro-theater-room > .userlist-minimized {
+ left:calc(var(--pro-theater-utility-left) + 8px) !important; top:14px !important; right:auto !important;
+ width:calc(var(--pro-theater-utility-width) - 48px) !important; max-height:28px; z-index:4;
+}
+html.pro-theater-active .pro-theater-room[data-pro-theater-collapsed="true"] [data-pro-theater-part="log"] { padding:0 !important; overflow:hidden !important; }
+html.pro-theater-active .pro-theater-room[data-pro-theater-collapsed="true"] [data-pro-theater-part="log"] > *,
+html.pro-theater-active .pro-theater-room[data-pro-theater-collapsed="true"] [data-pro-theater-part="chat-input"] { visibility:hidden; }
+.pro-theater-chat-header { position:absolute; top:12px; left:calc(var(--pro-theater-utility-left) + var(--pro-theater-utility-width) - 38px); z-index:6; }
+.pro-theater-action { cursor:pointer; min-width:27px; min-height:27px; }
+.pro-theater-calc-header {
+ position:absolute; top:var(--pro-theater-calc-top); left:var(--pro-theater-utility-left); width:var(--pro-theater-utility-width);
+ height:38px; box-sizing:border-box; display:flex; align-items:center; gap:6px;
+ padding:5px 8px; background:var(--pro-theater-surface); border:1px solid var(--pro-theater-border); border-radius:8px 8px 0 0; z-index:32;
+}
+.pro-theater-calc-header strong { flex:1; color:var(--pro-theater-text); }
+html.pro-theater-active .pro-theater-calcdex {
+ position:fixed !important; left:var(--pro-theater-utility-left) !important; top:calc(var(--pro-theater-calc-top) + 38px) !important;
+ right:auto !important; bottom:auto !important; width:var(--pro-theater-utility-width) !important;
+ height:calc(var(--pro-theater-calc-height) - 38px) !important;
+ display:block !important; z-index:30; margin:0 !important; padding:0 !important; overflow:auto !important;
+ border:1px solid var(--pro-theater-border); border-radius:0 0 8px 8px; box-sizing:border-box; background:var(--pro-theater-surface) !important; color:var(--pro-theater-text) !important;
+}
+html.pro-theater-active .pro-theater-calcdex[data-pro-theater-collapsed="true"] { display:none !important; visibility:hidden !important; pointer-events:none; }
+html.pro-theater-active .pro-theater-calcdex [data-showdex-module="calcdex"] { position:relative !important; inset:auto !important; width:100% !important; height:100% !important; }
+html.pro-theater-active .pro-theater-calcdex > [data-calcdex="panel"] { position:relative !important; width:100% !important; height:100% !important; }
+html.pro-theater-active .pro-theater-calcdex [data-pro-calc="overlay-close"] { display:none !important; }
+html.pro-theater-active [data-pro-theater-part="users-list"] { position:fixed !important; left:calc(var(--pro-theater-utility-left) + 8px) !important; top:14px !important; width:80px !important; bottom:auto !important; max-height:28px; z-index:15; }
+html.pro-theater-active .pro-theater-room:has([data-pro-theater-part="users-list"]) [data-pro-theater-part="users"] { left:calc(var(--pro-theater-utility-left) + 92px) !important; width:calc(var(--pro-theater-utility-width) - 136px) !important; }
+/* Classic expands the same <ul> used for the count button. Let it become a
+   readable dropdown instead of keeping the toolbar's 28px clipping window. */
+html.pro-theater-active .pro-theater-room > ul.battle-userlist { display:block !important; }
+html.pro-theater-active .pro-theater-room > .battle-userlist.userlist-minimized { height:28px !important; box-sizing:border-box; }
+/* Removing hidden rows from layout also resets the native scroller on close,
+   so its count stays visible when a long list was scrolled to the bottom. */
+html.pro-theater-active .pro-theater-room > .battle-userlist.userlist-minimized > li:not(.userlist-count) { display:none !important; }
+html.pro-theater-active body .ps-room.pro-theater-room > .battle-userlist.userlist-maximized {
+ position:fixed !important; left:calc(var(--pro-theater-utility-left) + 8px) !important; top:14px !important;
+ width:min(280px,calc(var(--pro-theater-utility-width) - 52px)) !important;
+ height:auto !important; max-height:min(340px,calc(var(--pro-theater-chat-height) - 60px)) !important; bottom:auto !important;
+ overflow-x:hidden !important; overflow-y:auto !important; box-sizing:border-box;
+ background:var(--pro-theater-surface) !important; color:var(--pro-theater-text) !important;
+ border:1px solid var(--pro-theater-border) !important; border-radius:8px; box-shadow:0 8px 24px #0005;
+ scrollbar-width:thin; scrollbar-color:var(--pro-theater-thumb) var(--pro-theater-surface); z-index:25;
+}
+html.pro-theater-active .pro-theater-room > .battle-userlist.userlist-maximized li { height:auto; min-height:28px; font:13px "Segoe UI",Arial,sans-serif; }
+html.pro-theater-active body .pro-theater-room > .battle-userlist.userlist-maximized li button {
+ appearance:none !important;
+ height:28px !important; padding:4px 8px !important; font:13px "Segoe UI",Arial,sans-serif !important;
+ border:0 !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; text-shadow:none !important;
+}
+html.pro-theater-active body .pro-theater-room > .battle-userlist.userlist-maximized :is(.userlist-count,li button:hover,li.cur button) { background:var(--pro-theater-button-hover) !important; }
+html.pro-theater-active .pro-theater-room > .battle-userlist.userlist-maximized .userlist-count {
+ position:sticky; top:0; z-index:1; box-sizing:border-box; padding:6px 8px !important;
+ border-bottom:1px solid var(--pro-theater-border); color:var(--pro-theater-text) !important;
+}
+html.pro-theater-active .pro-theater-calcdex:not(.pro-theater-calc-expanded) [data-pro-calc="pokemon"],
+html.pro-theater-active .pro-theater-calcdex:not(.pro-theater-calc-expanded) [data-pro-calc="info"],
+html.pro-theater-active .pro-theater-calcdex:not(.pro-theater-calc-expanded) [data-pro-calc="tables"] { width:100% !important; flex-basis:auto !important; min-width:0 !important; margin:0 !important; padding:3px !important; }
+html.pro-theater-active .pro-theater-calcdex:not(.pro-theater-calc-expanded) [data-pro-calc="player"] { margin:0 !important; padding:4px !important; }
+html.pro-theater-active .pro-theater-calcdex:not(.pro-theater-calc-expanded) [data-pro-calc="info"] > [data-pro-calc-section="info-row"] { display:flex !important; }
+html.pro-theater-active .pro-theater-calcdex:not(.pro-theater-calc-expanded) [data-pro-calc="player-header"] { flex-wrap:wrap !important; }
+html.pro-theater-active .pro-theater-calcdex.pro-theater-calc-expanded { left:max(8px,calc(100vw - 660px)) !important; top:46px !important; width:min(650px,calc(100vw - 16px)) !important; height:calc(100vh - 54px) !important; box-shadow:0 10px 40px #0009; z-index:35; }
+.pro-theater-calc-header.pro-theater-calc-expanded { position:fixed; left:max(8px,calc(100vw - 660px)); top:8px; width:min(650px,calc(100vw - 16px)); z-index:36; }
+.pro-theater-calc-missing { position:absolute; left:var(--pro-theater-utility-left); top:calc(var(--pro-theater-calc-top) + 50px); width:var(--pro-theater-utility-width); box-sizing:border-box; padding:8px; color:var(--pro-theater-muted); }
+.pro-theater-divider { position:absolute; z-index:20; touch-action:none; border-radius:4px; }
+.pro-theater-divider:hover,.pro-theater-divider:focus-visible { background:#70bce8; outline:0; }
+.pro-theater-divider-vertical { cursor:col-resize; left:calc(var(--pro-theater-utility-left) - 7px); top:8px; width:6px; height:calc(100% - 16px); }
+.pro-theater-divider-horizontal { cursor:row-resize; left:var(--pro-theater-utility-left); top:calc(var(--pro-theater-calc-top) - 7px); width:var(--pro-theater-utility-width); height:6px; }
+
+
+/* The native frame fills the stage. Scenery and weather cover the added
+   space, while foreground layers retain the renderer's 640 x 360 geometry. */
+html.pro-theater-active [data-pro-theater-part="battle"] { box-sizing:border-box; }
+html.pro-theater-active [data-pro-theater-part="battle"] .innerbattle { width:100% !important; height:100% !important; }
+html.pro-theater-active [data-pro-theater-part="foreground"] { position:absolute !important; left:var(--pro-theater-scene-x) !important; top:var(--pro-theater-scene-y) !important; width:640px; height:360px; }
+html.pro-theater-active [data-pro-theater-part="battle"] .backdrop { inset:0 !important; width:100% !important; height:100% !important; background-size:cover !important; background-position:center !important; }
+html.pro-theater-active [data-pro-theater-part="battle"] :is(.leftbar,.rightbar) { width:100px !important; height:100% !important; }
+html.pro-theater-active .pro-theater-room[data-pro-theater-collapsed="true"] :is([data-pro-theater-part="log"],[data-pro-theater-part="chat-input"],[data-pro-theater-part="users"],[data-pro-theater-part="users-list"],.userlist,.userlist-minimized,.battle-options,.battle-userlist) { display:none !important; visibility:hidden !important; pointer-events:none; }
+.pro-theater-chat-header[data-pro-theater-collapsed="true"],.pro-theater-calc-header[data-pro-theater-collapsed="true"] {
+ position:fixed; left:var(--pro-theater-rail-left); top:8px; width:36px; height:var(--pro-theater-tab-height); box-sizing:border-box; padding:0; border:1px solid var(--pro-theater-border); border-radius:8px; background:var(--pro-theater-surface);
+}
+.pro-theater-calc-header[data-pro-theater-collapsed="true"] { top:var(--pro-theater-calc-tab-top); }
+.pro-theater-calc-header[data-pro-theater-collapsed="true"] > strong,.pro-theater-calc-header[data-pro-theater-collapsed="true"] > button:last-child { display:none; }
+:is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] > button {
+ display:flex; flex-direction:column; align-items:center; gap:16px; justify-content:flex-start; box-sizing:border-box; width:100%; height:100%; padding:24px 0 0; margin:0; border:0 !important; background:transparent !important; box-shadow:none !important;
+}
+:is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] span { font:600 10px/1.2 "Segoe UI",sans-serif; }
+:is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] .fa:first-child { font-size:18px; color:var(--pro-theater-accent); }
+
+html.pro-theater-active [data-pro-theater-part="battle"] :is(.trainer-near,.trainer-far2) { bottom:calc(75px + var(--pro-theater-scene-height) - 450px - var(--pro-theater-scene-y)); }
+html.pro-theater-active [data-pro-theater-part="battle"] :is(.trainer-far,.trainer-near2) { bottom:calc(232px + var(--pro-theater-scene-height) - 450px - var(--pro-theater-scene-y)); }
+html.pro-theater-active [data-pro-theater-part="battle"] .weather em { margin-left:115px; }
+html.pro-theater-active [data-pro-theater-part="battle"] .messagebar { left:110px; right:110px; }
+
+html.pro-theater-active [data-pro-theater-part="field-effects"],html.pro-theater-active [data-pro-theater-part="field-effects"] > .background { position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; }
+
+html.pro-theater-active .pro-theater-room:has([data-pro-theater-part="battle-actions"]) .battle-controls .whatdo { padding-right:240px; }
+
+/* Clip native scrollbar tracks as well as content to the panel silhouette.
+   Chat's log and composer share one outline, with a single footer seam. */
+html.pro-theater-active [data-pro-theater-part="controls"] { border-radius:8px !important; clip-path:inset(0 round 8px); }
+html.pro-theater-active [data-pro-theater-part="log"] { border:1px solid var(--pro-theater-border) !important; border-bottom:0 !important; border-radius:8px 8px 0 0 !important; clip-path:inset(0 round 8px 8px 0 0); overflow-x:hidden !important; }
+html.pro-theater-active [data-pro-theater-part="chat-input"] {
+ height:37px !important; min-height:0 !important; border:1px solid var(--pro-theater-border) !important; border-radius:0 0 8px 8px !important;
+ overflow:hidden !important; clip-path:inset(0 round 0 0 8px 8px); background:var(--pro-theater-surface) !important;
+}
+html.pro-theater-active [data-pro-theater-part="chat-input"] .chatbox { display:flex; align-items:center; gap:6px; width:100%; min-width:0; margin:0 !important; padding:0 !important; }
+html.pro-theater-active [data-pro-theater-part="chat-input"] .chatbox label { flex:0 1 auto; max-width:40%; width:auto !important; float:none !important; margin:0 !important; padding:0 !important; text-overflow:ellipsis; }
+html.pro-theater-active [data-pro-theater-part="chat-input"] .chatbox .textbox:not([aria-hidden="true"]) { flex:1 1 0; min-width:0 !important; width:0 !important; max-width:100%; min-height:23px; overflow-x:hidden !important; box-sizing:border-box !important; margin:0 !important; }
+/* Replay logs fill the whole chat panel, including the unused input footer. */
+html.pro-theater-active .pro-theater-room[data-pro-replay="true"] [data-pro-theater-part="log"] {
+ height:var(--pro-theater-chat-height) !important; border-bottom:1px solid var(--pro-theater-border) !important;
+ border-radius:8px !important; clip-path:inset(0 round 8px);
+}
+html.pro-theater-active .pro-theater-room[data-pro-replay="true"] [data-pro-theater-part="chat-input"] { display:none !important; }
+html.pro-theater-active .pro-theater-calcdex { clip-path:inset(0 round 0 0 8px 8px); }
+
+/* Match Pro's restrained blue surfaces and button highlights. The entire
+   edge tab remains clickable, including the label and restore chevron. */
+html.pro-theater-active .pro-theater-room :is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] {
+ overflow:hidden; color:var(--pro-theater-text) !important; border-color:var(--pro-theater-border) !important;
+ background:linear-gradient(180deg,color-mix(in srgb,var(--pro-theater-surface) 90%,var(--pro-theater-accent)),var(--pro-theater-surface)) !important;
+ box-shadow:inset 0 1px #ffffff16,0 2px 7px #0002;
+}
+html.pro-theater-active .pro-theater-room :is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] > button {
+ gap:14px; padding-top:18px; border-radius:7px !important; color:inherit !important; background:transparent !important; box-shadow:none !important;
+}
+html.pro-theater-active .pro-theater-room :is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] > button:hover { background:#72bde510 !important; }
+html.pro-theater-active .pro-theater-room :is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] > button:focus-visible { outline:2px solid #8bd6f5; outline-offset:-3px; }
+html.pro-theater-active .pro-theater-room :is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] .fa:first-child {
+ display:flex; justify-content:center; align-items:center; box-sizing:border-box; width:26px; height:28px; font-size:15px; color:var(--pro-theater-accent);
+ border:1px solid color-mix(in srgb,var(--pro-theater-border) 75%,var(--pro-theater-accent)); border-radius:6px; background:color-mix(in srgb,var(--pro-theater-surface) 85%,var(--pro-theater-accent)); box-shadow:inset 0 1px #ffffff16;
+}
+html.pro-theater-active .pro-theater-room :is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] span { letter-spacing:0.1px; font-size:9.5px; font-weight:600; }
+html.pro-theater-active .pro-theater-room :is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] .fa:last-child { font-size:12px; color:var(--pro-theater-accent); }
+
+/* A single closed panel docks above/below its open neighbor. Only two
+   closed panels use the narrow side rail, so an open panel keeps its width. */
+html.pro-theater-active .pro-theater-room[data-pro-theater-both-collapsed="false"] :is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] {
+ left:var(--pro-theater-utility-left); top:8px; width:var(--pro-theater-utility-width); height:38px;
+}
+html.pro-theater-active .pro-theater-room[data-pro-theater-both-collapsed="false"] .pro-theater-calc-header[data-pro-theater-collapsed="true"] { top:var(--pro-theater-calc-top); }
+html.pro-theater-active .pro-theater-room[data-pro-theater-both-collapsed="false"] :is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] > button {
+ flex-direction:row; justify-content:flex-start; gap:8px; padding:4px 8px; 
+}
+html.pro-theater-active .pro-theater-room[data-pro-theater-both-collapsed="false"] :is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] span { font-size:12px; }
+html.pro-theater-active .pro-theater-room[data-pro-theater-both-collapsed="false"] :is(.pro-theater-chat-header,.pro-theater-calc-header)[data-pro-theater-collapsed="true"] .fa:last-child { margin-left:auto; }
+
+/* The docked calculator keeps every native detail section. Its tables
+   adapt their columns instead of relying on the upstream window breakpoint. */
+html.pro-theater-active .pro-theater-calcdex:not(.pro-theater-calc-expanded) :is([data-pro-calc="player"],[data-pro-calc="pokemon"],[data-pro-calc="info"],[data-pro-calc="tables"],[data-pro-calc="stats"],[data-pro-calc="field"]) { box-sizing:border-box; min-width:0; max-width:100%; }
+html.pro-theater-active .pro-theater-calcdex:not(.pro-theater-calc-expanded) [data-pro-calc="stats"] { width:100%; grid-template-columns:repeat(var(--pro-theater-stat-columns,7),minmax(0,1fr)); column-gap:4px; }
+html.pro-theater-active .pro-theater-calcdex:not(.pro-theater-calc-expanded) [data-pro-calc-section="info-row"] > * { min-width:0; }
+
+html.pro-theater-active .pro-theater-calcdex:not(.pro-theater-calc-expanded) :has(> [data-pro-calc="player"]) { padding:8px !important; }
+html.pro-theater-active .pro-theater-calcdex:not(.pro-theater-calc-expanded) [data-pro-calc="player"] { padding:2px !important; }
+html.pro-theater-active .pro-theater-calcdex:not(.pro-theater-calc-expanded) [data-pro-calc="stats"] { margin-top:6px !important; }
+
+/* Decorative layers must not become full-size mouse targets when enlarged.
+   Native hover targets keep the same coordinate transform as their sprites. */
+html.pro-theater-active [data-pro-theater-part="foreground"] { pointer-events:none; }
+html.pro-theater-active [data-pro-theater-part="foreground"] :is(.has-tooltip,[data-tooltip],a,button) { pointer-events:auto; }
+html.pro-theater-active [data-pro-theater-part="field-effects"] { pointer-events:none; }
+html.pro-theater-active [data-pro-theater-part="controls"] { display:flow-root !important; }
+
+/* Theme the chrome owned by Theater without changing native move colors,
+   Pokémon artwork, or the calculator's independently selected color scheme. */
+html.pro-theater-active :is(.pro-theater-chat-header,.pro-theater-calc-header) { font:13px/1.35 "Segoe UI",Arial,sans-serif; }
+html.pro-theater-active .pro-theater-action { appearance:none !important; }
+html.pro-theater-active body .ps-room.pro-theater-room :is([data-pro-theater-part="controls"],[data-pro-theater-part="log"],[data-pro-theater-part="chat-input"]),
+html.pro-theater-active body .ps-room.pro-theater-calcdex {
+ color:var(--pro-theater-text) !important; background:var(--pro-theater-surface) !important;
+}
+html.pro-theater-active .pro-theater-calc-header:not([data-pro-theater-collapsed="true"]) {
+ color:var(--pro-theater-text) !important; background:var(--pro-theater-surface) !important; border-color:var(--pro-theater-border) !important;
+}
+html.pro-theater-active :is(.pro-theater-chat-header,.pro-theater-calc-header):not([data-pro-theater-collapsed="true"]) > .pro-theater-action {
+ color:var(--pro-theater-text) !important; background:var(--pro-theater-button) !important; border:1px solid var(--pro-theater-border) !important;
+ border-radius:6px !important; text-shadow:none !important;
+}
+html.pro-theater-active :is(.pro-theater-chat-header,.pro-theater-calc-header):not([data-pro-theater-collapsed="true"]) > .pro-theater-action:hover {
+ background:var(--pro-theater-button-hover) !important;
+}
+html.pro-theater-active .pro-theater-room [data-pro-theater-part="chat-input"] { color:var(--pro-theater-text) !important; }
+html.pro-theater-active .pro-theater-room [data-pro-theater-part="controls"] .whatdo { color:var(--pro-theater-text) !important; }
+html.pro-theater-active .pro-theater-room :is(.battle-options,.userlist-minimized,.battle-userlist) :is(button,a) {
+ color:var(--pro-theater-text) !important; border-color:var(--pro-theater-border) !important; text-shadow:none !important;
+}
+html.pro-theater-active:not(.showdown-pro) .pro-theater-room .battle :is(.leftbar,.rightbar) {
+ color:var(--pro-theater-text) !important; background:var(--pro-theater-sidebar) !important; border-color:var(--pro-theater-border) !important;
+}
+html.pro-theater-active:not(.showdown-pro) .pro-theater-room .battle .trainer strong { color:var(--pro-theater-text) !important; text-shadow:none; }
+html.pro-theater-active:not(.showdown-pro) :is([data-pro-theater-part="log"],.pro-theater-calcdex) {
+ scrollbar-color:var(--pro-theater-thumb) var(--pro-theater-surface); scrollbar-width:thin;
+}

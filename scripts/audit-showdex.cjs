@@ -78,7 +78,7 @@ module.exports=async(wc,root)=>{
     await evaluate('document.querySelector("button[name=toggleCalcdexOverlay]")?.click();');await pause(1000);await capture('calcdex');
     await evaluate("app.focusRoom('hellodex');");await click('Open Showdex Settings');
     for(const mode of ['Light','Dark']){await click(mode);assert.deepEqual(await state(),baseline[mode]);}
-    await click('Showdown');assert.equal((await state()).pro,false);
+    await click('Showdown');assert.equal((await state()).pro,await evaluate('return document.documentElement.classList.contains("showdown-pro");'),'Showdown follows the native Pro palette');
     await click('Pro');
     await evaluate("OptionsPopup.prototype.setTheme({currentTarget:{value:'light'}});");await pause(400);assert.equal((await state()).pro,true);
     await pause(1200);wc.reload();

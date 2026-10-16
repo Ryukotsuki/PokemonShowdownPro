@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('pro', {
+  openStreamerStream: () => ipcRenderer.invoke('panel:streamer-open'),
   getState: () => ipcRenderer.invoke('panel:state'),
   setSetting: (key, value) => ipcRenderer.invoke('panel:setting', key, value),
   reload: () => ipcRenderer.invoke('panel:reload'),

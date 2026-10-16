@@ -1,4 +1,11 @@
 /* Local chrome for the official Showdown client. Battle geometry and sprite art stay upstream. */
+html.dark body .ps-room :is(.battle-log,.chat-log,.pm-log) summary > button.pro-team-sheet-import {
+  appearance:none!important;display:inline-block!important;margin:3px 0 3px 8px!important;padding:4px 10px!important;
+  color:#eff8fd!important;background-color:#294b61!important;background-image:linear-gradient(180deg,#315e7a,#23465e)!important;
+  border:1px solid #618da5!important;border-radius:6px!important;text-shadow:none!important;box-shadow:inset 0 1px #ffffff24!important;
+  font:inherit!important;line-height:1.35!important;cursor:pointer;
+}
+html.dark body .ps-room :is(.battle-log,.chat-log,.pm-log) summary > button.pro-team-sheet-import:hover {background-image:linear-gradient(180deg,#4786a8,#2b5b78)!important;border-color:#a0dbf5!important;}
 /* Add-on controls use the same palette without changing their layout. */
 :is(.ps-save-battle-button,.ps-stats-button,.threeisland-tooltip button) {
   color:#e7f4fc!important;
@@ -1107,19 +1114,19 @@ html.dark body .ps-popup input[name="bgfile"]:hover::file-selector-button {
   color: #fff !important;
   background: #2d5872 !important;
 }
-html.dark body .ps-room .userlist li.cur,
-html.dark body .ps-room .userlist li.cur button {
+html.dark body .userlist li.cur,
+html.dark body .userlist li.cur button {
   background: #23475e !important;
 }
-html.dark body .ps-room .userlist li button:hover,
-html.dark body .ps-room .userlist li.cur button:hover {
+html.dark body .userlist li button:hover,
+html.dark body .userlist li.cur button:hover {
   background: #2d617f !important;
   box-shadow: inset 3px 0 #8ed9f8 !important;
 }
-html.dark body .ps-room .userlist li button:active {
+html.dark body .userlist li button:active {
   background: #1d3f55 !important;
 }
-html.dark body .ps-room .userlist li button:focus-visible {
+html.dark body .userlist li button:focus-visible {
   outline: 2px solid #8ed9f8 !important;
   outline-offset: -2px !important;
 }
@@ -1307,7 +1314,7 @@ html.dark body .ps-room :is(.battle-controls, .inline-controls, .overlay-control
 .chooser, .dark .chooser, .chooser em, .dark .chooser em { color: #d8eaf3 !important; background: #20394b !important; border-color: #45677c !important; }
 .chooser button, .dark .chooser button { color: #d8eaf3 !important; }
 .chooser button.sel, .dark .chooser button.sel { color: #fff !important; background: #386c8a !important; }
-.statbar { isolation: isolate; background: transparent !important; border-radius: 6px; box-shadow: none !important; }
+.statbar { isolation: isolate; min-height: 0 !important; padding-bottom: 5px !important; background: transparent !important; border-radius: 6px; box-shadow: none !important; }
 .statbar::before {
   content: "";
   position: absolute;
@@ -1323,15 +1330,19 @@ html.dark body .ps-room :is(.battle-controls, .inline-controls, .overlay-control
 .lstatbar::before { left: -36px; }
 .statbar strong, .dark .statbar strong { color: #f1f8fc !important; text-shadow: 0 1px 2px #000 !important; }
 .statbar strong a { color: inherit !important; }
-.statbar .hpbar { background: #183445 !important; border-color: #6a91a7 !important; border-radius: 10px; overflow: visible !important; }
+.statbar .hpbar { background: #183445 !important; border-color: #6a91a7 !important; border-radius: 4px !important; overflow: visible !important; }
+/* Stretch vertically with the damage trail: zoom rounds the fill's borders
+   independently of its content height. Keep native animated widths intact. */
+.statbar .hpbar .prevhp { display: flex !important; align-items: stretch !important; }
+.statbar .hpbar .hp { height: auto !important; flex: none !important; }
 .statbar .hpbar .hptext { color: #eef8fd !important; background: #2d526a !important; }
 .statbar .hpbar .hptextborder { border-color: #2d526a !important; }
-.statbar .status { position: relative; z-index: 1; color: #e9f5fb !important; }
+/* Badge rows sit outside the compact name/HP panel, even when they wrap. */
+.statbar .status { position: absolute !important; top: calc(100% + 7px); left: 1px; right: 1px; z-index: 1; color: #e9f5fb !important; }
 /* Keep the second doubles plate below its partner instead of painting over its name.
    Position classes follow the Pokémon slot through switches and viewpoint changes. */
 .battle [aria-label="Active Pokémon"]:has(.rightstatbar):not(:has(.centerstatbar)) .rstatbar.rightstatbar,
 .battle [aria-label="Active Pokémon"]:has(.rightstatbar):not(:has(.centerstatbar)) .lstatbar.leftstatbar { translate: 0 28px; }
-.battle [aria-label="Active Pokémon"]:has(.rightstatbar):not(:has(.centerstatbar)) .statbar::before { bottom: auto; height: 36px; }
 .battle [aria-label="Active Pokémon"]:has(.rightstatbar):not(:has(.centerstatbar)) .statbar strong { margin: 0 -4px; font-size: 12px; line-height: 16px; white-space: nowrap; }
 
 /* Showdown renders status badges inside the HP bar and mounts hover cards outside the room. */

@@ -1,0 +1,6 @@
+/* Classic's tall settings popup scrolls the document, whose transparent track
+   exposes the blue page background. Match the popup while Dark settings is open.
+   Keep native Light and the separate Pro scrollbar palette unchanged. */
+html:not(.showdown-new-client):not(.showdown-pro):is(.dark,:has(body.dark)):has(body > .ps-popup select[name="theme"]) {
+ scrollbar-color:#6c6c6f #0d151e !important;
+}

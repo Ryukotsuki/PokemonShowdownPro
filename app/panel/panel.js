@@ -43,6 +43,13 @@ function render(state) {
     $(prefix+'zoom-in').disabled=zoom>=200;
   }
   latestState=state;
+  $('streamer-mode').checked=!!state.settings?.streamerEnabled;
+  $('streamer-show-hub').checked=!!state.settings?.streamerShowHub;
+  $('streamer-show-showdex').checked=!!state.settings?.streamerShowShowdex;
+  $('streamer-show-moves').checked=!!state.settings?.streamerShowMoves;
+  $('streamer-show-pokemon-tooltips').checked=!!state.settings?.streamerShowPokemonTooltips;
+  $('streamer-show-teras').checked=!!state.settings?.streamerShowTeras;
+  $('streamer-open').textContent=state.ui?.streamerWindowOpen?'Show stream window':'Open stream window';
   $('app-version').textContent=`v${state.appVersion}`;
   document.title='Pokémon Showdown Pro';
   const collapsed=!!state.ui?.collapsed;
@@ -186,6 +193,16 @@ for (const [id, key] of [['auto-start-timer', 'autoStartTimer'], ['save-winning-
     catch (error) { $('settings-error').textContent = error.message; render(await window.pro.getState()); }
   };
 }
+$('streamer-mode').onchange=()=>hubAction(async()=>{
+  const input=$('streamer-mode');input.disabled=true;
+  try{render(await window.pro.setSetting('streamerEnabled',input.checked));}
+  catch(error){render(await window.pro.getState());throw error;}
+  finally{input.disabled=false;}
+});
+for(const [id,key] of [['streamer-show-hub','streamerShowHub'],['streamer-show-showdex','streamerShowShowdex'],['streamer-show-moves','streamerShowMoves'],['streamer-show-pokemon-tooltips','streamerShowPokemonTooltips'],['streamer-show-teras','streamerShowTeras']]){
+  $(id).onchange=()=>hubAction(async()=>{try{render(await window.pro.setSetting(key,$(id).checked));}catch(error){render(await window.pro.getState());throw error;}});
+}
+$('streamer-open').onclick=()=>hubAction(async()=>render(await window.pro.openStreamerStream()));
 $('reload').onclick = () => hubAction(()=>window.pro.reload());
 $('auto-update-addons').onchange=()=>hubAction(async()=>render(await window.pro.setSetting('autoUpdateAddons',$('auto-update-addons').checked)));
 $('check-addon-updates').onclick=()=>hubAction(async()=>render(await window.pro.checkUpdates()));

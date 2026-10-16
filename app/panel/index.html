@@ -51,6 +51,17 @@
             <p class="module-note">Replay uploads run after your selected results and appear in History.</p>
             <p id="settings-error" class="error" role="alert"></p>
           </section>
+          <section class="module" aria-labelledby="streamer-title">
+            <div class="module-heading"><div><h2 id="streamer-title">Streamer Mode</h2><p>A live mirror of Pro for your stream.</p></div></div>
+            <label class="setting-row" for="streamer-mode"><span><strong>Streamer Mode</strong><small>Mirror the app with your chosen items hidden.</small></span><input id="streamer-mode" type="checkbox"></label>
+            <label class="setting-row" for="streamer-show-hub"><span><strong>Show Battle Hub</strong><small>Include the Hub in your stream.</small></span><input id="streamer-show-hub" type="checkbox"></label>
+            <label class="setting-row" for="streamer-show-showdex"><span><strong>Show Showdex</strong><small>Include the calculator and its panels.</small></span><input id="streamer-show-showdex" type="checkbox"></label>
+            <label class="setting-row" for="streamer-show-moves"><span><strong>Show moves and switches</strong><small>Include your battle controls and choices.</small></span><input id="streamer-show-moves" type="checkbox"></label>
+            <label class="setting-row" for="streamer-show-pokemon-tooltips"><span><strong>Show Pokémon tooltips</strong><small>Include Pokémon details when you hover.</small></span><input id="streamer-show-pokemon-tooltips" type="checkbox"></label>
+            <label class="setting-row" for="streamer-show-teras"><span><strong>Show sidebar Teras</strong><small>Include Tera reminders beside the battlefield.</small></span><input id="streamer-show-teras" type="checkbox"></label>
+            <button id="streamer-open" class="action-button" type="button">Open stream window</button>
+            <p class="module-note">In OBS or Discord, share the <strong>Showdown Pro Stream</strong> window. The mirror follows the whole main window. On Windows, minimizing sends it behind the client to keep capture active. Only checked items are shown; your main window keeps all controls.</p>
+          </section>
           <details class="module services"><summary>Systems</summary>
             <label class="setting-row" for="showdex-enabled"><span><strong>Showdex</strong><small id="showdex">Loading…</small></span><input id="showdex-enabled" type="checkbox" checked></label>
             <p class="helper">Reload Showdown to apply Showdex changes.</p>

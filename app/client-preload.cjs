@@ -1,6 +1,12 @@
 const { contextBridge, ipcRenderer, webFrame } = require('electron');
-// The remote page only reports protocol events. It cannot change app settings or spawn processes.
+// Narrow client bridge: battle reports and validated Theater layout preferences.
 contextBridge.exposeInMainWorld('showdownProEvents', Object.freeze({
+  searchReplays: query => ipcRenderer.invoke('client:replay-search',query),
+  replayAccount: () => ipcRenderer.invoke('client:replay-account'),
+  loadReplay: url => ipcRenderer.invoke('client:replay-load',url),
+  getTheaterLayout: () => ipcRenderer.invoke('client:theater-layout'),
+  setTheaterLayout: value => ipcRenderer.invoke('client:theater-layout',value),
+  setTheaterActive: roomId => ipcRenderer.send('client:theater-active',roomId),
   receive: data => { if (typeof data === 'string' && data.length <= 8 * 1024 * 1024) ipcRenderer.send('client:receive', data); },
   sent: (room, command) => { if (typeof room === 'string' && typeof command === 'string' && command.length < 512) ipcRenderer.send('client:sent', room, command); },
 }));

@@ -141,6 +141,10 @@
     }
   }
   host.receive = function (data, ...args) {
+    // Offline replay rooms use the native renderer/Showdex receiver, but must
+    // never count as live games or trigger messages, timers or uploads.
+    const offlineId=typeof data==='string'&&/^>(battle-[a-z0-9-]+)\n/.exec(data)?.[1];
+    if(offlineId&&host.rooms?.[offlineId]?.proReplayURL)return receive.call(this,data,...args);
     // Server-side replay uploads confirm through |popup|, which the new
     // client renders with PS.alert rather than the classic popup APIs.
     if (typeof data === 'string' && data.includes('|popup|')) {

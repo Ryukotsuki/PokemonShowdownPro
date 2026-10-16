@@ -38,4 +38,61 @@ function appendTeraInfo(room, markup, currentUser) {
   if (!bar) return;
   room.querySelector('.ditTeraInfo[data-side="' + (currentUser ? 'you' : 'opponent') + '"]')?.remove();
   bar.insertAdjacentHTML('afterend', markup);
+  ditWatchTeraLayout(room);
+}
+
+// A hidden room reports zero trainer height. Keep its cards unpainted until
+// layout is available, then update without waiting for another Tera event.
+var ditTeraLayouts = new Map();
+var ditTeraCleanup;
+function ditPositionTeraCards(room) {
+  for (const card of room.querySelectorAll('.ditTeraInfo')) {
+    const you = card.dataset.side === 'you';
+    const trainer = room.querySelector('.innerbattle ' + getUserBar(you) + ' .trainer');
+    const height = trainer?.offsetHeight;
+    if (!height) { card.style.visibility = 'hidden'; continue; }
+    const offset = (height + 45) + 'px';
+    card.style.top = you ? 'auto' : offset;
+    card.style.bottom = you ? offset : 'auto';
+    card.style.visibility = '';
+  }
+}
+function ditWatchTeraLayout(room) {
+  if (typeof ResizeObserver !== 'function') return;
+  const existing = ditTeraLayouts.get(room);
+  if (existing) { existing.refresh(); return; }
+  let watched = new Set();
+  const sizes = new ResizeObserver(() => ditPositionTeraCards(room));
+  const dispose = () => {
+    sizes.disconnect(); changes.disconnect(); ditTeraLayouts.delete(room);
+    if (!ditTeraLayouts.size) { ditTeraCleanup?.disconnect(); ditTeraCleanup = null; }
+  };
+  const refresh = () => {
+    if (!room.isConnected || !room.querySelector('.ditTeraInfo')) { dispose(); return; }
+    // Showdown replaces trainer elements after switches and team updates.
+    const targets = new Set([room, ...room.querySelectorAll('.innerbattle, .leftbar .trainer, .rightbar .trainer')]);
+    for (const target of watched) if (!targets.has(target)) sizes.unobserve(target);
+    for (const target of targets) if (!watched.has(target)) sizes.observe(target);
+    watched = targets;
+    ditPositionTeraCards(room);
+  };
+  const changes = new MutationObserver(records => {
+    // Ignore battle-log and animation changes; only sidebar/card replacement
+    // requires observing new layout elements.
+    const selector = '.innerbattle, .leftbar, .rightbar, .trainer, .ditTeraInfo';
+    if (records.some(record => record.target.closest?.('.leftbar, .rightbar') ||
+      [...record.addedNodes, ...record.removedNodes].some(node => node.nodeType === 1 &&
+        (node.matches(selector) || node.querySelector(selector))))) refresh();
+  });
+  changes.observe(room, {childList: true, subtree: true});
+  ditTeraLayouts.set(room, {refresh, dispose});
+  if (!ditTeraCleanup) {
+    ditTeraCleanup = new MutationObserver(records => {
+      if (records.some(record => record.removedNodes.length)) {
+        for (const [battle, layout] of ditTeraLayouts) if (!battle.isConnected) layout.dispose();
+      }
+    });
+    ditTeraCleanup.observe(document.body, {childList: true, subtree: true});
+  }
+  refresh();
 }

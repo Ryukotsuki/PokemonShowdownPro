@@ -45,6 +45,9 @@ class BrowserAddons {
       }
       `+code.slice(end);
       code=code.replace("{ childList: true },","{ childList: true, subtree: true },");
+      const sheetStart=code.indexOf('function runCodeCheck(details, isPM) {'),sheetEnd=code.indexOf('function mapNodeToContent(node)',sheetStart);
+      if(sheetStart<0||sheetEnd<0)throw new Error('Three Island has an unsupported team sheet importer.');
+      code=code.slice(0,sheetStart)+fs.readFileSync(path.join(this.root,'app/addons/team-sheet-import.js'),'utf8')+'\n'+code.slice(sheetEnd);
       if (!code.includes('tooltipInner.appendChild(data.pasteHTML.cloneNode(true));') || !code.includes('ftd.appendChild(tooltip);') || !code.includes('addCSS(CSS);')) throw new Error('Three Island has an unsupported preview renderer.');
       code=code
         .replace('tooltipInner.appendChild(data.pasteHTML.cloneNode(true));', 'tooltipInner.appendChild(data.pasteHTML.cloneNode(true)); for (const set of tooltipInner.querySelectorAll(".threeisland-set")) window.__showdownProPastePreview(set, set.querySelector(".threeisland-tooltip"), true);')

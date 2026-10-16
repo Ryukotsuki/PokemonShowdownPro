@@ -64,6 +64,8 @@ app.whenReady().then(async () => {
       await run(`${version === 'old' ? 'app' : 'PS'}.focusRoom('hellodex');`);
       await clickLabel('Open Showdex Settings');
       await wait(`document.querySelector(${JSON.stringify(settingsButton('export'))})`);
+      // Export/import still preserves an explicitly selected Pro override.
+      await clickLabel('Pro');
       // Reproduce the shipping deny-all policy before checking the fix.
       ses.setPermissionCheckHandler(() => false);
       ses.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
@@ -89,13 +91,13 @@ app.whenReady().then(async () => {
       for (let i = 0; i < 100 && await clipboard.readText() === exported; i++) await pause(50);
       const defaults = await clipboard.readText();
       assert.ok(validSettings(defaults), 'Defaults copies a valid settings payload');
-      assert.ok(defaults.includes('fc:pro;'), 'Defaults retains Pro as the bundled default');
+      assert.ok(defaults.includes('fc:showdown;'), 'Defaults follows the Showdown client theme');
       await click(settingsButton('import'));
       await wait('document.documentElement.classList.contains("showdex-pro")', 'Defaults payload imports successfully');
       await pause(300);
       assert.equal(await run('return document.documentElement.classList.contains("showdex-pro");'), true, 'Imported settings remain applied after the form rerenders');
       // Validate persistence using Showdex's database in this isolated profile.
-      await wait(`new Promise(resolve=>{const req=indexedDB.open('showdex');req.onsuccess=()=>{const db=req.result,get=db.transaction('settings').objectStore('settings').get('showdex');get.onsuccess=()=>{db.close();resolve(get.result?.forcedColorScheme==='pro');};};})`);
+      await wait(`new Promise(resolve=>{const req=indexedDB.open('showdex');req.onsuccess=()=>{const db=req.result,get=db.transaction('settings').objectStore('settings').get('showdex');get.onsuccess=()=>{db.close();resolve(get.result?.forcedColorScheme==='showdown');};};})`);
       fs.writeFileSync(path.join(out, version + '-settings.png'), (await wc.capturePage()).toPNG());
       report.push({ version, deniedPolicyReproduced: true, export: true, import: true, undo: true, defaults: true, persisted: true });
       console.log(version + ': Export, Import, Undo and Defaults passed with the production clipboard policy');

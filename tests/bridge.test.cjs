@@ -60,6 +60,16 @@ function replayHarness({ client = 'old', finished = true } = {}) {
   return { host, window, sent, popups, received, roomId, uploads, queries, setUploadResult(value) { uploadResult=value; } };
 }
 test('lifecycle tracking alone never sends a command', () => { assert.equal(harness().sent.length, 0); });
+test('native offline replay playback bypasses live lifecycle reporting in both clients',()=>{
+ for(const client of ['old','new']){
+  const reports=[],received=[],id='battle-gen9ou-proreplay1';
+  const host={receive:data=>received.push(data),send:()=>assert.fail('Replay must not send'),rooms:{[id]:{proReplayURL:'https://replay.pokemonshowdown.com/gen9ou-123'}}};
+  const window={[client==='old'?'app':'PS']:host,showdownProEvents:{receive:data=>reports.push(data),sent:()=>assert.fail('Replay must not send')}};
+  vm.runInNewContext(source,{window,...browserGlobals});
+  host.receive('>'+id+'\n|init|battle\n|player|p1|A\n|win|A');
+  assert.equal(received.length,1);assert.equal(reports.length,0);
+ }
+});
 test('rooms loaded before bridge installation seed the tracker without replaying or sending',()=>{
   for(const client of ['old','new'])for(const submitted of [false,true]){
     const packets=[],req=request(3),id='battle-gen9randombattle-998';let nativeReceives=0;

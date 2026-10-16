@@ -28,7 +28,7 @@ test('gradient text retains clipping and hover background positions',()=>{
 });
 test('patches match the pinned upstream files and route Pro through its persisted preference',()=>{
   const defaults=fs.readFileSync(path.join(__dirname,'../vendor/showdex/src/consts/hydro/settings.ts'),'utf8').replace(/\r\n/g,'\n');
-  assert.match(source.transform(defaults,'/consts/hydro/settings.ts'),/forcedColorScheme: 'pro',/);
+  assert.match(source.transform(defaults,'/consts/hydro/settings.ts'),/forcedColorScheme: 'showdown',/);
   for(const file of ['interfaces/app/ShowdexSettings.ts','utils/host/getColorScheme.ts','pages/Bootdex/BootdexPreactAdapter.ts','redux/store/showdexSlice.ts','components/layout/PageContainer/PageContainer.tsx','pages/Hellodex/SettingsPane/GeneralSettingsPane.tsx']){
     const content=fs.readFileSync(path.join(__dirname,'../vendor/showdex/src',file),'utf8').replace(/\r\n/g,'\n');
     const result=source.transform(content,'/'+file);
