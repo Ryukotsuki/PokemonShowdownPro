@@ -5,6 +5,7 @@ const {pathToFileURL}=require('node:url');
 const {StreamerStream,collectMirrorMap,maskRectangles}=require('../app/streamer-mode.cjs');
 const {history,request}=require('../tests/fixtures.cjs');
 const {loadAuditClient,isolateAuditNetwork}=require('./audit-client.cjs');
+const {waitForMirrorValue}=require('./streamer-audit-timing.cjs');
 const root=path.resolve(__dirname,'..'),out=path.join(root,'test-results/streamer-mode');
 protocol.registerSchemesAsPrivileged([{scheme:'showdown-pro',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}]);
 app.setPath('userData',path.join(out,process.argv.includes('--gpu')?'mirror-gpu-profile':'mirror-profile'));if(!process.argv.includes('--gpu'))app.disableHardwareAcceleration();
@@ -21,8 +22,8 @@ app.whenReady().then(async()=>{
  source.webContents.on('console-message',details=>{if(details.level==='error'&&/TypeError|Uncaught|Showdex/.test(details.message))console.error('Player renderer:',details.message.slice(0,500));});
  const hub=new BrowserWindow({show:false,width:360,height:900,webPreferences:{offscreen:true,backgroundThrottling:false}});hub.webContents.setAudioMuted(true);
  await hub.loadURL('data:text/html,'+encodeURIComponent('<body style="margin:0;background:#203d51;color:white;font:24px Arial"><h1>Battle Hub</h1></body>'));
- let visibility={hub:false,showdex:false,moves:false},barrier;const captures=new WeakMap();
- const stream=new StreamerStream({createWindow:options=>new BrowserWindow({...options,webPreferences:{...options.webPreferences,offscreen:true}}),contents:()=>source.webContents,visible:false,interval:100,visibility:()=>visibility,hub:()=>({contents:hub.webContents,x:0,width:360,height:hub.getContentSize()[1]}),capture:async contents=>{const action=barrier;barrier=null;const image=await stream.nextImage(contents);if(action)await action();return image;},onFrame:image=>{if(stream.lastFrame&&image)captures.set(stream.lastFrame,image);}});
+ let visibility={hub:false,showdex:false,moves:false},barrier,captureDelay=0;const captures=new WeakMap();
+ const stream=new StreamerStream({createWindow:options=>new BrowserWindow({...options,webPreferences:{...options.webPreferences,offscreen:true}}),contents:()=>source.webContents,visible:false,interval:100,visibility:()=>visibility,hub:()=>({contents:hub.webContents,x:0,width:360,height:hub.getContentSize()[1]}),capture:async contents=>{const action=barrier;barrier=null;const image=await stream.nextImage(contents);if(captureDelay)await pause(captureDelay);if(action)await action();return image;},onFrame:image=>{if(stream.lastFrame&&image)captures.set(stream.lastFrame,image);}});
  const sourceRun=code=>source.webContents.executeJavaScript(code),reports=[];
  const loadClient=async version=>{
   await loadAuditClient(source.webContents,'https://play.pokemonshowdown.com/'+version+'client');const host=version==='old'?'app':'PS';
@@ -157,21 +158,34 @@ app.whenReady().then(async()=>{
    for(const size of [[900,1300],[1400,900]]){source.setContentSize(...size);stream.window.setContentSize(...size);stream.invalidate();await ready();}
    // Exercise the reported maximized resolution with all components visible.
    visibility={hub:true,showdex:true,moves:true,tooltips:true,teras:true};source.setContentSize(1560,1008);hub.setContentSize(360,1008);stream.window.setContentSize(1920,1008);stream.interval=1000/60;stream.invalidate();await ready();
-   await sourceRun("(()=>{const marker=document.createElement('div');marker.id='mirror-live-counter';marker.textContent='Live 0';marker.style='position:fixed;left:10px;bottom:10px;width:64px;height:20px;padding-left:8px;background:#12abcd;color:white;z-index:999999';document.body.append(marker);let n=0;window.__mirrorLiveTimer=setInterval(()=>{window.__mirrorCounter=++n;marker.firstChild.data='Live '+n;marker.style.backgroundColor='rgb('+(n%256)+',111,77)';},33);})();void 0;");
+   captureDelay=process.argv.includes('--slow-capture')?700:0;
+   await sourceRun("(()=>{const marker=document.createElement('div');marker.id='mirror-live-counter';marker.textContent='Live 0';marker.style='position:fixed;left:10px;bottom:10px;width:64px;height:20px;padding-left:8px;background:#000;color:white;z-index:999999';document.body.append(marker);window.__mirrorCounter=0;window.__mirrorLiveTimer=setInterval(()=>{const n=++window.__mirrorCounter;marker.firstChild.data='Live '+n;marker.style.backgroundColor='rgb('+(n%256)+','+((n>>8)%256)+','+((n>>16)%256)+')';},33);})();void 0;");
    const baseline=stream.stats.painted,sentBaseline=stream.stats.sent,started=Date.now();await pause(2500);const fps=(stream.stats.painted-baseline)*1000/(Date.now()-started);
    assert.ok(stream.stats.painted>baseline,'Live frames continue arriving');
    assert.ok((stream.stats.sent-sentBaseline)-(stream.stats.painted-baseline)<=2,'Frames never build up behind the renderer');
-   const counter=await sourceRun("(()=>{const r=document.getElementById('mirror-live-counter').getBoundingClientRect();return {value:window.__mirrorCounter,x:r.x+2,y:r.y+2,width:innerWidth,height:innerHeight};})()");
+   // Read and stop the source in the same renderer task. The next update must
+   // reach the actual output canvas; a frozen picture cannot pass on IPC ACKs.
+   const counter=await sourceRun("(()=>{clearInterval(window.__mirrorLiveTimer);const marker=document.getElementById('mirror-live-counter'),n=++window.__mirrorCounter;marker.firstChild.data='Live '+n;marker.style.backgroundColor='rgb('+(n%256)+','+((n>>8)%256)+','+((n>>16)%256)+')';const r=marker.getBoundingClientRect();return {value:n,x:r.x+2,y:r.y+2,width:innerWidth,height:innerHeight};})()");
    const live=stream.lastFrame.client,offset=(Math.floor(counter.y*live.height/counter.height)*live.width+Math.floor(counter.x*live.width/counter.width))*4;
-   const shown=live.pixels[offset+(live.format==='bgra'?2:0)],age=(counter.value%256-shown+256)%256;
-   assert.ok(age<=16,'Mirror remains current instead of displaying old queued screenshots: '+age+' ticks');
+   const shown=live.pixels[offset+(live.format==='bgra'?2:0)]+(live.pixels[offset+1]<<8)+(live.pixels[offset+(live.format==='bgra'?0:2)]<<16),age=counter.value-shown;
+   const convergence=await waitForMirrorValue(counter.value,()=>stream.window.webContents.executeJavaScript(`(()=>{
+    const canvas=document.getElementById('mirror');if(canvas.hidden)return null;
+    const x=${Math.floor(counter.x*live.width/counter.width)},y=${Math.floor(counter.y*live.height/counter.height)};let pixel;
+    if(window.__streamStats.renderer==='webgl'){
+     const gl=canvas.getContext('webgl');if(!gl||gl.isContextLost())return null;
+     pixel=new Uint8Array(4);gl.readPixels(x,canvas.height-1-y,1,1,gl.RGBA,gl.UNSIGNED_BYTE,pixel);if(gl.getError()!==gl.NO_ERROR)return null;
+    }else pixel=canvas.getContext('2d').getImageData(x,y,1,1).data;
+    return pixel[0]+(pixel[1]<<8)+(pixel[2]<<16);
+   })()`));
+   captureDelay=0;
+   fs.writeFileSync(path.join(out,version+'-mirror-timing.json'),JSON.stringify({fps,age,convergence,stages:stream.stats.stages},null,2));
    const edges=await stream.window.webContents.executeJavaScript("(()=>{const r=document.getElementById('mirror').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,viewportWidth:innerWidth,viewportHeight:innerHeight};})()");
    const caption=process.platform==='win32'?32:0;
    assert.equal(edges.x,0);assert.equal(edges.y,caption);assert.equal(edges.width,edges.viewportWidth);assert.equal(edges.height,edges.viewportHeight-caption);
    assert.ok(stream.lastFrame.hub,'The requested Hub stays included during live capture');
    fs.writeFileSync(path.join(out,version+'-mirror-full-window.png'),(await stream.window.webContents.capturePage()).toPNG());
    const renderer=await stream.window.webContents.executeJavaScript('window.__streamStats.renderer');
-   reports.push({version,fps,renderer,edges,age});console.log(version+': full-HD mirror '+fps.toFixed(1)+' fps ('+renderer+'); '+age+' ticks behind; Hub included; no added margins.');
+   reports.push({version,fps,renderer,edges,age,convergence});console.log(version+': full-HD mirror '+fps.toFixed(1)+' fps ('+renderer+'); sampled lag '+age+' ticks; final source update displayed in '+convergence.elapsed+'ms; Hub included; no added margins.');
    await sourceRun("clearInterval(window.__mirrorLiveTimer);document.getElementById('mirror-live-counter').remove();void 0;");stream.interval=100;source.setContentSize(1400,900);stream.window.setContentSize(1400,900);visibility={hub:false,showdex:false,moves:false};stream.invalidate();
    console.log(version+': full app mirror, real controls retained, independent visibility, original pixel match, private-overlay race, Teambuilder/lobby, zoom and resizing passed.');
   }
